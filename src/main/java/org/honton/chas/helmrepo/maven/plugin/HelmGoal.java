@@ -11,11 +11,6 @@ import org.apache.maven.project.MavenProject;
  *
  */
 public abstract class HelmGoal extends AbstractMojo {
-  @Parameter(defaultValue = "${session}", required = true, readonly = true)
-  MavenSession session;
-  @Parameter(defaultValue = "${project}", required = true, readonly = true)
-  MavenProject project;
-
   /**
    * Skip upgrade
    */

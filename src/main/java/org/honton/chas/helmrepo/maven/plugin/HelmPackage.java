@@ -1,10 +1,14 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
 import org.apache.commons.io.input.ReaderInputStream;
+import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
 import org.codehaus.plexus.archiver.tar.TarGZipArchiver;
 import org.codehaus.plexus.archiver.util.DefaultFileSet;
@@ -25,7 +29,11 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
-public abstract class HelmPackage extends HelmGoal implements GlobalReleaseOptions {
+/**
+ * Package a helm chart and optionally attach as secondary artifact
+ */
+@Mojo(name = "package", defaultPhase = LifecyclePhase.PACKAGE, threadSafe = true)
+public class HelmPackage extends HelmGoal {
   /**
    * Attach helm chart as a secondary artifact
    */
@@ -46,6 +54,12 @@ public abstract class HelmPackage extends HelmGoal implements GlobalReleaseOptio
 
   @Parameter(defaultValue = "${project.build.directory}/${project.artifactId}-${project.version}.tgz", required = true, readonly = true)
   File destFile;
+
+  @Parameter(defaultValue = "${session}", required = true, readonly = true)
+  MavenSession session;
+
+  @Parameter(defaultValue = "${project}", required = true, readonly = true)
+  MavenProject project;
 
   @Component
   MavenProjectHelper projectHelper;
