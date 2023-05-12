@@ -4,7 +4,7 @@ import lombok.Data;
 
 /** Information about a helm release */
 @Data
-public class Release {
+public class ReleaseInfo {
   /** The name of the release. Defaults to the unversioned chart name. */
   String name;
 

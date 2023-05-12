@@ -1,9 +1,12 @@
-# connection-maven-plugin
+# helrepo-maven-plugin
 
-Set a property based upon whether a URL can be opened. 
+Use maven repository to store helm charts.  This has three goals:
+1. Package helm chart and add as a secondary artifact for build
+2. Upgrade (install) helm chart release(s)
+3. Uninstall helm chart release(s)
 
 # Rationale
-You may wish to disable a plugin based upon whether a resource is available or not.
+
 
 # Plugin
 Plugin reports available at [plugin info](https://chonton.github.io/connection-maven-plugin/0.0.2/plugin-info.html).
@@ -28,7 +31,7 @@ which binds by default to the *validate* phase.
         <plugins>
           <plugin>
             <groupId>org.honton.chas</groupId>
-            <artifactId>connection-maven-plugin</artifactId>
+            <artifactId>helmrepo-maven-plugin</artifactId>
             <version>0.0.1</version>
           </plugin>
         </plugins>
@@ -37,18 +40,17 @@ which binds by default to the *validate* phase.
     <plugins>
       <plugin>
         <groupId>org.honton.chas</groupId>
-        <artifactId>connection-maven-plugin</artifactId>
+        <artifactId>helmrepo-maven-plugin</artifactId>
         <executions>
           <execution>
             <goals>
-              <goal>connection</goal>
+              <goal>package</goal>
             </goals>
-            <configuration>
-              <url>https://example.com/sq:9000</url>
-              <property>sonar.skip</property>
-            </configuration>
           </execution>
         </executions>
+        <configuration>
+            
+        </configuration>
       </plugin>
     </plugins>
   </build>

@@ -8,14 +8,14 @@ import lombok.NonNull;
 import lombok.Value;
 
 @Value
-public class ReleaseRequirements {
-  @NonNull Release release;
+public class ReleaseState {
+  @NonNull ReleaseInfo release;
 
   /** The releases that this release requires before deployment */
   @NonNull Set<String> requires;
 
   /** The releases that depend upon this release */
-  Map<String, ReleaseRequirements> depends = new HashMap<>();
+  Map<String, ReleaseState> depends = new HashMap<>();
 
   public boolean isSolved() {
     return requires.isEmpty();
@@ -34,7 +34,7 @@ public class ReleaseRequirements {
     return requires.isEmpty();
   }
 
-  public void addDependent(String name, ReleaseRequirements value) {
+  public void addDependent(String name, ReleaseState value) {
     depends.put(name, value);
   }
 }

@@ -6,7 +6,7 @@ import lombok.Value;
  * Information about the kubernetes cluster
  */
 @Value
-public class Kubernetes {
+public class KubernetesInfo {
   /**
    * The name of the kubectl context to use
    */

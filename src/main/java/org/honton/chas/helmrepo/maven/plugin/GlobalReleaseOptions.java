@@ -13,5 +13,5 @@ public interface GlobalReleaseOptions {
   /**
    * Information about the kubernetes cluster
    */
-  Kubernetes getKubernetes();
+  KubernetesInfo getKubernetes();
 }

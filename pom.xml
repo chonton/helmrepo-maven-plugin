@@ -66,6 +66,7 @@
 
     <maven.version>3.8.5</maven.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <x>${project.build.directory}/${project.build.finalName}</x>
   </properties>
 
   <dependencies>
@@ -119,6 +120,12 @@
       <artifactId>mockito-core</artifactId>
       <version>3.6.0</version>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-archiver</artifactId>
+      <version>4.7.1</version>
     </dependency>
 
   </dependencies>

@@ -2,14 +2,19 @@ package org.honton.chas.helmrepo.maven.plugin;
 
 public class CommandLineGenerator {
 
-  private StringBuilder sb = new StringBuilder("helm");
+  private StringBuilder sb = new StringBuilder("helm ");
 
   public CommandLineGenerator upgrade() {
-    sb.append(" upgrade --install ");
+    sb.append("upgrade --install ");
     return this;
   }
 
-  public CommandLineGenerator appendRelease(Release release) {
+  public CommandLineGenerator uninstall() {
+    sb.append("uninstall ");
+    return this;
+  }
+
+  public CommandLineGenerator appendRelease(ReleaseInfo release) {
     sb.append(release.getName()).append(' ').append(release.getChart());
     return this;
   }
@@ -26,7 +31,7 @@ public class CommandLineGenerator {
     return this;
   }
 
-  private CommandLineGenerator appendKubernetes(Kubernetes kubernetes) {
+  private CommandLineGenerator appendKubernetes(KubernetesInfo kubernetes) {
     if (kubernetes != null) {
       String context = kubernetes.getContext();
       if (context != null) {
@@ -37,4 +42,5 @@ public class CommandLineGenerator {
   }
 
   private void appendValues(String valueYaml) {}
+
 }

@@ -1,20 +1,5 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -23,26 +8,42 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-public abstract class ReleaseMojo extends AbstractMojo implements GlobalReleaseOptions {
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-  @Parameter(defaultValue = "${session}", required = true, readonly = true)
-  MavenSession session;
+public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptions {
 
-  @Parameter(defaultValue = "${project}", required = true, readonly = true)
-  MavenProject mavenProject;
+  /**
+   * List of releases to upgrade
+   */
+  @Parameter
+  List<ReleaseInfo> releases;
 
-  /** Skip upgrade */
-  @Parameter(property = "helm.skip", defaultValue = "false")
-  boolean skip;
+  /**
+   * Values to be applied during upgrade. This is formatted as yaml.
+   */
+  @Parameter
+  @Getter
+  String valueYaml;
 
-  /** List of releases to upgrade */
-  @Parameter List<Release> releases;
-
-  /** Values to be applied during upgrade. This is formatted as yaml. */
-  @Parameter @Getter String valueYaml;
-
-  /** Information about the kubernetes cluster */
-  @Parameter @Getter Kubernetes kubernetes;
+  /**
+   * Information about the kubernetes cluster
+   */
+  @Parameter
+  @Getter
+  KubernetesInfo kubernetes;
 
   private static String unversionedName(String chart) {
     if (chart.endsWith(".tgz")) {
@@ -56,43 +57,41 @@ public abstract class ReleaseMojo extends AbstractMojo implements GlobalReleaseO
     return chart;
   }
 
-  private static Set<String> asSet(Release release) {
+  private static Set<String> asSet(ReleaseInfo release) {
     String commaSeparated = release.getRequires();
     return commaSeparated != null
         ? new HashSet<>(Arrays.asList(commaSeparated.split("\\w*,\\w*")))
         : Set.of();
   }
 
-  public final void execute() throws MojoFailureException, MojoExecutionException {
-    if (skip) {
-      getLog().info("skipping helm");
-    } else {
-      for (Release release : getReleasesInRequiredOrder()) {
+  protected final void doExecute() throws MojoFailureException, MojoExecutionException {
+      for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
         CommandLineGenerator commandLineGenerator = getCommandLineGenerator(release);
         commandLineGenerator.appendRelease(release);
         commandLineGenerator.appendGlobalReleaseOptions(this);
         executeHelmCommand(commandLineGenerator.getCommand());
       }
-    }
   }
 
-  public abstract CommandLineGenerator getCommandLineGenerator(Release release);
+  protected abstract Iterable<ReleaseInfo> getIterable(LinkedList<ReleaseInfo> inOrder);
 
- void pumpLog(InputStream is, Consumer<String> lineConsumer) {
-   try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
-     reader.lines().forEach(lineConsumer);
-   } catch (IOException e) {
-     lineConsumer.accept(e.getMessage());
-   }
- }
+  protected abstract CommandLineGenerator getCommandLineGenerator(ReleaseInfo release);
+
+  void pumpLog(InputStream is, Consumer<String> lineConsumer) {
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+      reader.lines().forEach(lineConsumer);
+    } catch (IOException e) {
+      lineConsumer.accept(e.getMessage());
+    }
+  }
 
   private void executeHelmCommand(String command) throws MojoExecutionException {
     try {
       Process process = new ProcessBuilder(command).start();
 
       ForkJoinPool pool = ForkJoinPool.commonPool();
-      pool.execute( () -> pumpLog(process.getInputStream(), getLog()::info) );
-      pool.execute( () -> pumpLog(process.getErrorStream(), getLog()::error) );
+      pool.execute(() -> pumpLog(process.getInputStream(), getLog()::info));
+      pool.execute(() -> pumpLog(process.getErrorStream(), getLog()::error));
 
       if (process.waitFor() != 0) {
         throw new MojoExecutionException(command);
@@ -105,13 +104,13 @@ public abstract class ReleaseMojo extends AbstractMojo implements GlobalReleaseO
     }
   }
 
-  private List<Release> getReleasesInRequiredOrder() {
-    Map<String, ReleaseRequirements> releaseToRequirements = new HashMap<>();
+  LinkedList<ReleaseInfo> getReleasesInRequiredOrder() {
+    Map<String, ReleaseState> releaseToRequirements = new HashMap<>();
 
     releases.forEach(
         release -> {
           canonicalize(release);
-          ReleaseRequirements requirements = new ReleaseRequirements(release, asSet(release));
+          ReleaseState requirements = new ReleaseState(release, asSet(release));
           if (releaseToRequirements.put(release.getName(), requirements) != null) {
             throw new IllegalStateException("duplicate definition of " + release.getName());
           }
@@ -124,7 +123,7 @@ public abstract class ReleaseMojo extends AbstractMojo implements GlobalReleaseO
                 .getRequires()
                 .forEach(
                     require -> {
-                      ReleaseRequirements requirements = releaseToRequirements.get(require);
+                      ReleaseState requirements = releaseToRequirements.get(require);
                       if (requirements == null) {
                         throw new IllegalArgumentException(
                             "Missing definition for require " + require + " on release " + name);
@@ -132,12 +131,12 @@ public abstract class ReleaseMojo extends AbstractMojo implements GlobalReleaseO
                       requirements.addDependent(require, value);
                     }));
 
-    List<Release> releaseOrder = new ArrayList<>();
+    LinkedList<ReleaseInfo> releaseOrder = new LinkedList<>();
 
     for (; ; ) {
-      List<ReleaseRequirements> solved =
+      List<ReleaseState> solved =
           releaseToRequirements.values().stream()
-              .filter(ReleaseRequirements::isSolved)
+              .filter(ReleaseState::isSolved)
               .collect(Collectors.toList());
       long count =
           solved.stream()
@@ -161,8 +160,10 @@ public abstract class ReleaseMojo extends AbstractMojo implements GlobalReleaseO
     return releaseOrder;
   }
 
-  /** Each Release must have proper release name and chart */
-  private Release canonicalize(Release release) {
+  /**
+   * Each Release must have proper release name and chart
+   */
+  private void canonicalize(ReleaseInfo release) {
     String chart = release.getChart();
     if (chart == null) {
       throw new IllegalArgumentException("Release must have chart information");
@@ -171,7 +172,6 @@ public abstract class ReleaseMojo extends AbstractMojo implements GlobalReleaseO
     if (release.getName() == null) {
       release.setName(unversionedName(chart));
     }
-    return release;
   }
 
   private String replaceMavenArtifactWithLocalFile(String chart) {
