@@ -72,19 +72,6 @@
   <dependencies>
 
     <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <version>1.18.26</version>
-      <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.13.1</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-artifact</artifactId>
       <version>${maven.version}</version>
@@ -116,16 +103,23 @@
     </dependency>
 
     <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-archiver</artifactId>
+      <version>4.7.1</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>3.6.0</version>
+      <version>5.3.1</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.codehaus.plexus</groupId>
-      <artifactId>plexus-archiver</artifactId>
-      <version>4.7.1</version>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <version>1.18.26</version>
+      <scope>provided</scope>
     </dependency>
 
   </dependencies>
@@ -134,25 +128,60 @@
     <plugins>
 
       <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.2.0</version>
+      </plugin>
+
+      <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.3</version>
+        <version>3.11.0</version>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.1.1</version>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.3.0</version>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.2.5</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
       <plugin>
         <artifactId>maven-install-plugin</artifactId>
-        <version>2.4</version>
+        <version>3.1.1</version>
       </plugin>
 
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.4</version>
+        <version>3.3.0</version>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.5.0</version>
       </plugin>
 
       <plugin>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.6.0</version>
+        <version>3.8.2</version>
         <configuration>
-          <goalPrefix>helm</goalPrefix>
+          <goalPrefix>helmrepo</goalPrefix>
           <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
         </configuration>
         <executions>
@@ -172,6 +201,16 @@
       </plugin>
 
       <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.3.1</version>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.1.0</version>
+      </plugin>
+
+      <plugin>
         <artifactId>maven-site-plugin</artifactId>
         <version>3.9.1</version>
       </plugin>
@@ -183,12 +222,12 @@
 
       <plugin>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.6.0</version>
+        <version>3.8.2</version>
       </plugin>
 
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>3.1.1</version>
+        <version>3.4.3</version>
         <reportSets>
           <reportSet>
             <reports>
@@ -254,7 +293,7 @@
 
           <plugin>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
+            <version>3.1.0</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
@@ -295,7 +334,7 @@
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>nexus-staging-maven-plugin</artifactId>
-            <version>1.6.8</version>
+            <version>1.6.13</version>
             <extensions>true</extensions>
             <configuration>
               <serverId>ossrh</serverId>

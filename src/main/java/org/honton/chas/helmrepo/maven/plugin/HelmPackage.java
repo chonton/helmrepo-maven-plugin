@@ -50,7 +50,7 @@ public class HelmPackage extends HelmGoal {
    * Directory path which holds the chart to package. Last segment of path should match ${project.artifactId} for helm to be able to use
    */
   @Parameter(defaultValue = "src/helm/${project.artifactId}")
-  File chart;
+  File chartDir;
 
   @Parameter(defaultValue = "${project.build.directory}/${project.artifactId}-${project.version}.tgz", required = true, readonly = true)
   File destFile;
@@ -65,7 +65,7 @@ public class HelmPackage extends HelmGoal {
   MavenProjectHelper projectHelper;
 
   protected final void doExecute() throws MojoFailureException, MojoExecutionException {
-    DefaultFileSet fileSet = DefaultFileSet.fileSet(chart);
+    DefaultFileSet fileSet = DefaultFileSet.fileSet(chartDir);
     if (filter) {
       fileSet.setStreamTransformer(this::createStream);
     }
