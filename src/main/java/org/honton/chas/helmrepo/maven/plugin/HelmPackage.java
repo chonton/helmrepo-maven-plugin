@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
- * Package a helm chart and optionally attach as secondary artifact
+ * Package a helm chart and attach as secondary artifact
  */
 @Mojo(name = "package", defaultPhase = LifecyclePhase.PACKAGE, threadSafe = true)
 public class HelmPackage extends HelmGoal {

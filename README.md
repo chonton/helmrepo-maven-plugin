@@ -18,11 +18,11 @@ phase.
 
 # Plugin
 
-Plugin reports available at [plugin info](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/plugin-info.html).
+Plugin reports available at [plugin info](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/plugin-info.html).
 
 ## Upgrade Goal
 
-The [upgrade](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/upgrade.html) goal binds by default to the
+The [upgrade](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/upgrade.html) goal binds by default to the
 **pre-integration-test** phase. This goal will execute `helm upgrade --install` for each release. If the release name is
 not specified, the name will be derived from the chart name.
 
@@ -49,7 +49,7 @@ not specified, the name will be derived from the chart name.
 A chart name can be any of the following
 
 1. A maven GAV coordinate: *org.honton.chas:test-reports:1.3.4*
-2. An absolute URL: *https://repo.maven.apache.org/maven2/org/honton/chas/test-reports/1.3.4/test-reports-1.3.4.tgz*
+2. An absolute URL: *https://&ZeroWidthSpace;repo.maven.apache.org/maven2/org/honton/chas/test-reports/1.3.4/test-reports-1.3.4.tgz*
 3. A path to an unpacked chart directory: *src/helm/superfantastic*
 4. A path to a packaged chart: *superfantastic-44.12.3.tgz*
 5. A chart reference: *repository/chartname*
@@ -57,13 +57,13 @@ A chart name can be any of the following
 
 ## Uninstall Goal
 
-The [uninstall](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/uninstall.html) goal binds by default to the
+The [uninstall](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/uninstall.html) goal binds by default to the
 **post-integration-test** phase. This goal will execute `helm uninstall` for each release. Configuration is similar to
 the **install** goal; the **valueYaml** parameter is ignored.
 
 ## Package Goal
 
-The [package](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/package.html) goal binds by default to the
+The [package](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/package.html) goal binds by default to the
 **package** phase. This goal will create a helm package from the chart source. Unless turned off, the content will be
 [filtered]((https://maven.apache.org/plugins/maven-resources-plugin/examples/filter.html)) using maven properties.
 Unless turned off, the resulting *.tgz* artifact is attached as a secondary artifact for the build. The helm package

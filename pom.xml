@@ -55,6 +55,10 @@
   </distributionManagement>
 
   <properties>
+    <delombok.output>${project.build.directory}/delombok</delombok.output>
+    <javadoc-plugin.version>3.5.0</javadoc-plugin.version>
+    <lombok.version>1.18.26</lombok.version>
+
     <maven.compiler.release>11</maven.compiler.release>
     <maven.compiler.source>${maven.compiler.release}</maven.compiler.source>
     <maven.compiler.target>${maven.compiler.release}</maven.compiler.target>
@@ -65,8 +69,8 @@
     <maven.site.deploy.skip>true</maven.site.deploy.skip>
 
     <maven.version>3.8.5</maven.version>
+    <plugin-plugin.version>3.8.2</plugin-plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <x>${project.build.directory}/${project.build.finalName}</x>
   </properties>
 
   <dependencies>
@@ -75,24 +79,28 @@
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-artifact</artifactId>
       <version>${maven.version}</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-core</artifactId>
       <version>${maven.version}</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-model</artifactId>
       <version>${maven.version}</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-api</artifactId>
       <version>${maven.version}</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -118,7 +126,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.26</version>
+      <version>${lombok.version}</version>
       <scope>provided</scope>
     </dependency>
 
@@ -173,13 +181,8 @@
       </plugin>
 
       <plugin>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>3.5.0</version>
-      </plugin>
-
-      <plugin>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.8.2</version>
+        <version>${plugin-plugin.version}</version>
         <configuration>
           <goalPrefix>helmrepo</goalPrefix>
           <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
@@ -214,6 +217,61 @@
         <artifactId>maven-site-plugin</artifactId>
         <version>3.9.1</version>
       </plugin>
+
+      <plugin>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok-maven-plugin</artifactId>
+        <version>1.18.20.0</version>
+        <configuration>
+          <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+          <outputDirectory>${delombok.output}</outputDirectory>
+          <addOutputDirectory>false</addOutputDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>delombok</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>io.github.floverfelt</groupId>
+        <artifactId>find-and-replace-maven-plugin</artifactId>
+        <version>1.1.0</version>
+        <executions>
+          <execution>
+            <id>KubernetesInfo</id>
+            <phase>site</phase>
+            <goals>
+              <goal>find-and-replace</goal>
+            </goals>
+            <configuration>
+              <replacementType>file-contents</replacementType>
+              <baseDir>target/site/</baseDir>
+              <fileMask>.html</fileMask>
+              <findRegex><![CDATA[<code>(org\.honton\.chas\.helmrepo\.maven\.plugin\.)?KubernetesInfo</code>]]></findRegex>
+              <replaceValue><![CDATA[<code><a href="./apidocs/org/honton/chas/helmrepo/maven/plugin/KubernetesInfo.html">KubernetesInfo</a></code>]]></replaceValue>
+            </configuration>
+          </execution>
+          <execution>
+            <id>ReleaseInfo</id>
+            <phase>site</phase>
+            <goals>
+              <goal>find-and-replace</goal>
+            </goals>
+            <configuration>
+              <replacementType>file-contents</replacementType>
+              <baseDir>target/site/</baseDir>
+              <fileMask>.html</fileMask>
+              <findRegex><![CDATA[<code>(java\.util\.)?List&lt;(org\.honton\.chas\.helmrepo\.maven\.plugin\.)?ReleaseInfo&gt;</code>]]></findRegex>
+              <replaceValue><![CDATA[<code>List&lt;<a href="./apidocs/org/honton/chas/helmrepo/maven/plugin/ReleaseInfo.html">ReleaseInfo</a>&gt;</code>]]></replaceValue>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -221,8 +279,20 @@
     <plugins>
 
       <plugin>
-        <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.8.2</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${javadoc-plugin.version}</version>
+        <configuration>
+          <sourcepath>${delombok.output}</sourcepath>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-plugin-report-plugin</artifactId>
+        <version>${plugin-plugin.version}</version>
+        <configuration>
+          <disableInternalJavadocLinkValidation>true</disableInternalJavadocLinkValidation>
+        </configuration>
       </plugin>
 
       <plugin>
@@ -307,7 +377,7 @@
 
           <plugin>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.2.0</version>
+            <version>${plugin-plugin.version}</version>
             <executions>
               <execution>
                 <id>attach-javadocs</id>

@@ -6,7 +6,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import java.util.LinkedList;
 
 /**
- * Upgrade helm release(s)
+ * Uninstall helm release(s)
  */
 @Mojo(name = "uninstall", defaultPhase = LifecyclePhase.POST_INTEGRATION_TEST, threadSafe = true)
 public class HelmUninstall extends HelmRelease {
