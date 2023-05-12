@@ -1,12 +1,16 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
 import lombok.Getter;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.plugin.AbstractMojo;
+import lombok.SneakyThrows;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactRequest;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -45,6 +49,24 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   @Getter
   KubernetesInfo kubernetes;
 
+  /**
+   * The entry point to Maven Artifact Resolver, i.e. the component doing all the work.
+   */
+  @Component
+  RepositorySystem repoSystem;
+
+  /**
+   * The current repository/network configuration of Maven.
+   */
+  @Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
+  RepositorySystemSession repoSession;
+
+  /**
+   * The project's remote repositories to use for the resolution.
+   */
+  @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
+  List<RemoteRepository> remoteRepos;
+
   private static String unversionedName(String chart) {
     if (chart.endsWith(".tgz")) {
       int endIdx = chart.lastIndexOf('-');
@@ -65,12 +87,12 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   }
 
   protected final void doExecute() throws MojoFailureException, MojoExecutionException {
-      for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
-        CommandLineGenerator commandLineGenerator = getCommandLineGenerator(release);
-        commandLineGenerator.appendRelease(release);
-        commandLineGenerator.appendGlobalReleaseOptions(this);
-        executeHelmCommand(commandLineGenerator.getCommand());
-      }
+    for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
+      CommandLineGenerator commandLineGenerator = getCommandLineGenerator(release);
+      commandLineGenerator.appendRelease(release);
+      commandLineGenerator.appendGlobalReleaseOptions(this);
+      executeHelmCommand(commandLineGenerator.getCommand());
+    }
   }
 
   protected abstract Iterable<ReleaseInfo> getIterable(LinkedList<ReleaseInfo> inOrder);
@@ -191,8 +213,12 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
    * @param chart
    * @return The local file location
    */
+  @SneakyThrows
   private String localArtifact(String chart) {
-    // TODO !!!!!
-    return chart;
+    ArtifactRequest request = new ArtifactRequest();
+    request.setArtifact(new DefaultArtifact(chart));
+    request.setRepositories(remoteRepos);
+
+    return repoSystem.resolveArtifact(repoSession, request).getArtifact().getFile().getAbsolutePath();
   }
 }
