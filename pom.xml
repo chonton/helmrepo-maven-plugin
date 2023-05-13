@@ -238,6 +238,54 @@
       </plugin>
 
       <plugin>
+        <artifactId>maven-invoker-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <filterProperties>
+            <localRepository>${project.build.directory}/it-repo</localRepository>
+          </filterProperties>
+          <goals>
+            <goal>install</goal>
+          </goals>
+          <localRepositoryPath>${project.build.directory}/it-repo</localRepositoryPath>
+          <pomIncludes>
+            <pomInclude>*/pom.xml</pomInclude>
+          </pomIncludes>
+          <postBuildHookScript>verify</postBuildHookScript>
+          <settingsFile>src/it/settings.xml</settingsFile>
+        </configuration>
+        <executions>
+          <execution>
+            <id>install</id>
+            <goals>
+              <goal>install</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+          <execution>
+            <id>0-integration-tests</id>
+            <goals>
+              <goal>run</goal>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <invokerTest>package</invokerTest>
+            </configuration>
+          </execution>
+          <execution>
+            <id>10-integration-tests</id>
+            <goals>
+              <goal>run</goal>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <invokerTest>install</invokerTest>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <artifactId>maven-resources-plugin</artifactId>
         <version>3.3.1</version>
       </plugin>

@@ -65,7 +65,8 @@ public class HelmPackage extends HelmGoal {
   MavenProjectHelper projectHelper;
 
   protected final void doExecute() throws MojoFailureException, MojoExecutionException {
-    DefaultFileSet fileSet = DefaultFileSet.fileSet(chartDir);
+    DefaultFileSet fileSet = DefaultFileSet.fileSet(chartDir.getParentFile());
+    fileSet.setIncludes(new String[]{chartDir.getName() + "/**/*.*"});
     if (filter) {
       fileSet.setStreamTransformer(this::createStream);
     }
