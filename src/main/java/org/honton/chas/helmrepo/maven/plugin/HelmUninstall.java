@@ -3,7 +3,10 @@ package org.honton.chas.helmrepo.maven.plugin;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Uninstall helm release(s)
@@ -12,12 +15,23 @@ import java.util.LinkedList;
 public class HelmUninstall extends HelmRelease {
 
   @Override
-  protected CommandLineGenerator getCommandLineGenerator(ReleaseInfo release) {
-    return new CommandLineGenerator().uninstall();
+  public void addSubCommand(List<String> commandLine) {
+    commandLine.add("uninstall");
   }
 
   @Override
-  protected Iterable<ReleaseInfo> getIterable(LinkedList<ReleaseInfo> inOrder) {
+  public String chartReference(ReleaseInfo info) {
+    return null;
+  }
+
+  @Override
+  public Path releaseValues(ReleaseInfo info) {
+    return null;
+  }
+
+  @Override
+  public Iterable<ReleaseInfo> getIterable(LinkedList<ReleaseInfo> inOrder) {
     return inOrder::descendingIterator;
   }
+
 }

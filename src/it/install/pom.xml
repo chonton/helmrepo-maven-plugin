@@ -21,13 +21,26 @@
           <execution>
             <id>install</id>
             <goals>
+              <goal>package</goal>
               <goal>upgrade</goal>
               <goal>uninstall</goal>
             </goals>
             <configuration>
+              <valueYaml>
+pipeline:
+  region: us-east-2
+              </valueYaml>
               <releases>
                 <release>
                   <chart>org.honton.chas.helmrepo.it:package:0.0.0</chart>
+                </release>
+                <release>
+                  <chart>${project.build.directory}/${project.build.finalName}.tgz</chart>
+                  <requires>package</requires>
+                  <valueYaml>
+pipeline:
+  theatre: us
+                  </valueYaml>
                 </release>
               </releases>
             </configuration>

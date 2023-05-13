@@ -1,15 +1,20 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.io.File;
 
 /** Information about a helm release */
 @Data
 public class ReleaseInfo {
   /** The name of the release. Defaults to the unversioned chart name. */
-  String name;
+  private String name;
 
   /** The namespace for un-scoped kubernetes resources */
-  String namespace;
+  private String namespace;
 
   /**
    * The chart for this release. This can be one of
@@ -22,20 +27,20 @@ public class ReleaseInfo {
    *   <li>An OCI registries: oci://example.com/charts/nginx
    * </ul>
    */
-  String chart;
+  private String chart;
 
   /**
    * Values to be applied during upgrade. This is formatted as yaml.
    */
-  String valueYaml;
+  private String valueYaml;
 
   /**
    * A comma separated list of releases that must be deployed before this release.
    */
-  String requires;
+  private String requires;
 
   /**
    * Number of seconds to wait for successful deployment.  Defaults to 300 secs (5 minutes)
    */
-  long wait;
+  private long wait;
 }

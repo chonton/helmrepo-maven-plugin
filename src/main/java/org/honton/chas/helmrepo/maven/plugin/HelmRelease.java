@@ -12,16 +12,18 @@ import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactRequest;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.*;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptions {
+public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptions, CommandOptions {
 
   /**
    * List of releases to upgrade
@@ -43,6 +45,10 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   @Getter
   KubernetesInfo kubernetes;
 
+  @Parameter(defaultValue = "${project.build.directory}/helm-values", required = true, readonly = true)
+  File targetValuesDir;
+  Path targetValuesPath;
+
   /**
    * The entry point to Maven Artifact Resolver, i.e. the component doing all the work.
    */
@@ -61,37 +67,22 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
   List<RemoteRepository> remoteRepos;
 
-  private static String unversionedName(String chart) {
-    if (chart.endsWith(".tgz")) {
-      int endIdx = chart.lastIndexOf('-');
-      if (endIdx < 0) {
-        throw new IllegalArgumentException(chart + " is not a proper versioned chart");
-      }
-      int firstIdx = chart.lastIndexOf('/');
-      return chart.substring(firstIdx + 1, endIdx);
-    }
-    return chart;
-  }
+  // global values path
+  @Getter
+  Path globalValuePath;
 
-  private static Set<String> asSet(ReleaseInfo release) {
-    String commaSeparated = release.getRequires();
-    return commaSeparated != null
-        ? new HashSet<>(Arrays.asList(commaSeparated.split("\\w*,\\w*")))
-        : Set.of();
-  }
+  protected final void doExecute() throws MojoFailureException, MojoExecutionException, IOException {
+    targetValuesPath = Files.createDirectories(targetValuesDir.toPath());
+    globalValuePath = valueYaml != null ? Files.writeString(targetValuesPath.resolve("_.yaml"), valueYaml) : null;
 
-  protected final void doExecute() throws MojoFailureException, MojoExecutionException {
     for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
-      CommandLineGenerator commandLineGenerator = getCommandLineGenerator(release);
-      commandLineGenerator.appendRelease(release);
-      commandLineGenerator.appendGlobalReleaseOptions(this);
-      executeHelmCommand(commandLineGenerator.getCommand());
+      CommandLineGenerator generator = new CommandLineGenerator(this)
+          .appendGlobalReleaseOptions(this)
+          .appendRelease(release, this);
+
+      executeHelmCommand(generator.getCommand());
     }
   }
-
-  protected abstract Iterable<ReleaseInfo> getIterable(LinkedList<ReleaseInfo> inOrder);
-
-  protected abstract CommandLineGenerator getCommandLineGenerator(ReleaseInfo release);
 
   void pumpLog(InputStream is, Consumer<String> lineConsumer) {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
@@ -103,6 +94,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
 
   private void executeHelmCommand(List<String> command) throws MojoExecutionException {
     try {
+      getLog().info(String.join(" ", command));
       Process process = new ProcessBuilder(command).start();
 
       ForkJoinPool pool = ForkJoinPool.commonPool();
@@ -110,7 +102,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
       pool.execute(() -> pumpLog(process.getErrorStream(), getLog()::error));
 
       if (process.waitFor() != 0) {
-        throw new MojoExecutionException('`' + String.join(" ", command) + '`');
+        throw new MojoExecutionException("helm exit value: " + process.exitValue());
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -130,7 +122,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     releases.forEach(
         release -> {
           canonicalize(release);
-          ReleaseState requirements = new ReleaseState(release, asSet(release));
+          ReleaseState requirements = new ReleaseState(release, ReleaseHelper.asSet(release.getRequires()));
           if (releaseToRequirements.put(release.getName(), requirements) != null) {
             throw new IllegalStateException("duplicate definition of " + release.getName());
           }
@@ -188,21 +180,12 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     if (chart == null) {
       throw new IllegalArgumentException("Release must have chart information");
     }
-    release.setChart(replaceMavenArtifactWithLocalFile(chart));
     if (release.getName() == null) {
-      release.setName(unversionedName(chart));
+      release.setName(ReleaseHelper.unversionedName(chart));
     }
-  }
-
-  private String replaceMavenArtifactWithLocalFile(String chart) {
-    String[] parts = chart.split(":");
-    if (parts.length == 3) {
-      // maven artifact
-      return localArtifact(chart);
-    } else if (parts.length > 3) {
-      throw new IllegalArgumentException(chart + " is not a valid chart specification");
+    if (ReleaseHelper.isMavenArtifact(chart)) {
+      release.setChart(localArtifact(chart));
     }
-    return chart;
   }
 
   /**
@@ -214,7 +197,8 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   @SneakyThrows
   private String localArtifact(String chart) {
     ArtifactRequest request = new ArtifactRequest();
-    request.setArtifact(new DefaultArtifact(chart));
+    DefaultArtifact gav = new DefaultArtifact(chart);
+    request.setArtifact(new DefaultArtifact(gav.getGroupId(), gav.getArtifactId(), "tgz", gav.getVersion()));
     request.setRepositories(remoteRepos);
 
     return repoSystem.resolveArtifact(repoSession, request).getArtifact().getFile().getAbsolutePath();
