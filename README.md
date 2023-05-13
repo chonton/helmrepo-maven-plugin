@@ -28,32 +28,32 @@ not specified, the name will be derived from the chart name.
 
 ### Global Configuration
 
-| Parameter    | Default           | Description                                                   |
-|--------------|-------------------|---------------------------------------------------------------|
+|    Parameter |      Default      | Description                                                   |
+|-------------:|:-----------------:|:--------------------------------------------------------------|
 | kube.context | *kubectl default* | Name of the kubectl context to use                            |
-| valueYaml    | -                 | Global values to be applied during upgrade, formatted as yaml |
+|    valueYaml |         -         | Global values to be applied during upgrade, formatted as yaml |
 
 ### Per-Release Configuration
 
-| Parameter | Default                   | Description                                                                |
-|-----------|---------------------------|----------------------------------------------------------------------------|
-| chart     | -                         | Name of the chart                                                          |
-| name      | *Un-versioned chart name* | Name of the release                                                        |
+| Parameter |          Default          | Description                                                                |
+|----------:|:-------------------------:|:---------------------------------------------------------------------------|
+|     chart |        *required*         | Name of the chart                                                          |
+|      name | *Un-versioned chart name* | Name of the release                                                        |
 | namespace | *kubectl context default* | Namespace for un-scoped kubernetes resources                               |
-| requires  | -                         | Comma separated list of releases that must be deployed before this release |
-| valueYaml | -                         | Values to be applied to release, formatted as yaml                         |
-| wait      | 300                       | Number of seconds to wait for successful deployment                        |
+|  requires |             -             | Comma separated list of releases that must be deployed before this release |
+| valueYaml |             -             | Values to be applied to release, formatted as yaml                         |
+|      wait |            300            | Number of seconds to wait for successful deployment                        |
 
 #### Chart Name
 
-A chart name can be any of the following
+A chart name can be any of the following:
 
-1. A maven GAV coordinate: *org.honton.chas:test-reports:1.3.4*
-2. An absolute URL: *https://&ZeroWidthSpace;repo.maven.apache.org/maven2/org/honton/chas/test-reports/1.3.4/test-reports-1.3.4.tgz*
-3. A path to an unpacked chart directory: *src/helm/superfantastic*
-4. A path to a packaged chart: *superfantastic-44.12.3.tgz*
-5. A chart reference: *repository/chartname*
-6. An OCI registry: *oci://example.com/charts/nginx*
+1. Maven GAV coordinate: *org.honton.chas:test-reports:1.3.4*
+2. URL: *https://&ZeroWidthSpace;repo.maven.apache.org/maven2/org/honton/chas/test-reports/1.3.4/test-reports-1.3.4.tgz*
+3. Path to an unpacked chart directory: *src/helm/superfantastic*
+4. Path to a packaged chart: *superfantastic-44.12.3.tgz*
+5. Chart reference: *repository/chartname*
+6. OCI registry URL: *oci://example.com/charts/nginx*
 
 ## Uninstall Goal
 
@@ -64,11 +64,11 @@ the **install** goal; the **valueYaml** parameter is ignored.
 ## Package Goal
 
 The [package](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/package.html) goal binds by default to the
-**package** phase. This goal will create a helm package from the chart source. Unless turned off, the content will be
-[filtered]((https://maven.apache.org/plugins/maven-resources-plugin/examples/filter.html)) using maven properties.
-Unless turned off, the resulting *.tgz* artifact is attached as a secondary artifact for the build. The helm package
-will be installed in the local maven repository during the **install** phase and deployed to the remote maven repository
-during the **deploy** phase.
+**package** phase. This goal will create a helm package from the chart source. Content will be
+[filtered](https://maven.apache.org/plugins/maven-resources-plugin/examples/filter.html) using maven properties.
+Resulting *.tgz* artifact is attached as a secondary artifact for the build. The helm package will be installed in the
+local maven repository during the **install** phase and deployed to the remote maven repository during the **deploy**
+phase.
 
 ### Configuration
 
@@ -85,46 +85,55 @@ during the **deploy** phase.
 ```xml
 
 <build>
-    <pluginManagement>
-        <plugins>
-            <plugin>
-                <groupId>org.honton.chas</groupId>
-                <artifactId>helmrepo-maven-plugin</artifactId>
-                <version>0.0.1</version>
-            </plugin>
-        </plugins>
-    </pluginManagement>
-
+  <pluginManagement>
     <plugins>
-        <plugin>
-            <groupId>org.honton.chas</groupId>
-            <artifactId>helmrepo-maven-plugin</artifactId>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>package</goal>
-                        <goal>upgrade</goal>
-                        <goal>uninstall</goal>
-                    </goals>
-                </execution>
-            </executions>
-            <configuration>
-                <releases combine.children="append">
-                    <release>
-                        <chart>org.honton.chas:test-reports:1.3.4</chart>
-                        <valueYaml>
-                            name: localvalue
-                        </valueYaml>
-                    </release>
-                    <release>
-                        <name>report-job</name>
-                        <namespace>report</namespace>
-                        <requires>test-reports</requires>
-                        <chart>src/helm/${project.artifactId}</chart>
-                    </release>
-                </releases>
-            </configuration>
-        </plugin>
+      <plugin>
+        <groupId>org.honton.chas</groupId>
+        <artifactId>helmrepo-maven-plugin</artifactId>
+        <version>0.0.1</version>
+      </plugin>
     </plugins>
+  </pluginManagement>
+
+  <plugins>
+    <plugin>
+      <groupId>org.honton.chas</groupId>
+      <artifactId>helmrepo-maven-plugin</artifactId>
+      <executions>
+        <execution>
+          <goals>
+            <goal>package</goal>
+            <goal>upgrade</goal>
+            <goal>uninstall</goal>
+          </goals>
+        </execution>
+      </executions>
+      <configuration>
+        <valueYaml><![CDATA[
+name: globalValue
+]]>
+        </valueYaml>
+        <releases combine.children="append">
+          <release>
+            <chart>org.honton.chas:test-reports:1.3.4</chart>
+            <valueYaml><![CDATA[
+name: releaseValue
+nested:
+  list:
+  - one
+  - two
+]]>
+            </valueYaml>
+          </release>
+          <release>
+            <name>report-job</name>
+            <namespace>report</namespace>
+            <requires>test-reports</requires>
+            <chart>src/helm/${project.artifactId}</chart>
+          </release>
+        </releases>
+      </configuration>
+    </plugin>
+  </plugins>
 </build>
 ```
