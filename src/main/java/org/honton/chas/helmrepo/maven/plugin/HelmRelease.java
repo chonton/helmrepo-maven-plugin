@@ -16,13 +16,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -107,7 +101,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     }
   }
 
-  private void executeHelmCommand(String command) throws MojoExecutionException {
+  private void executeHelmCommand(List<String> command) throws MojoExecutionException {
     try {
       Process process = new ProcessBuilder(command).start();
 
@@ -116,7 +110,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
       pool.execute(() -> pumpLog(process.getErrorStream(), getLog()::error));
 
       if (process.waitFor() != 0) {
-        throw new MojoExecutionException(command);
+        throw new MojoExecutionException('`' + String.join(" ", command) + '`');
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -127,6 +121,10 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   }
 
   LinkedList<ReleaseInfo> getReleasesInRequiredOrder() {
+    if (releases == null) {
+      return new LinkedList<>();
+    }
+
     Map<String, ReleaseState> releaseToRequirements = new HashMap<>();
 
     releases.forEach(
@@ -198,10 +196,10 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
 
   private String replaceMavenArtifactWithLocalFile(String chart) {
     String[] parts = chart.split(":");
-    if (parts.length == 2) {
+    if (parts.length == 3) {
       // maven artifact
       return localArtifact(chart);
-    } else if (parts.length > 2) {
+    } else if (parts.length > 3) {
       throw new IllegalArgumentException(chart + " is not a valid chart specification");
     }
     return chart;

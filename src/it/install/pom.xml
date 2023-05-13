@@ -15,7 +15,6 @@
     <plugins>
 
       <plugin>
-
         <groupId>org.honton.chas</groupId>
         <artifactId>helmrepo-maven-plugin</artifactId>
         <executions>
@@ -25,6 +24,13 @@
               <goal>upgrade</goal>
               <goal>uninstall</goal>
             </goals>
+            <configuration>
+              <releases>
+                <release>
+                  <chart>org.honton.chas.helmrepo.it:package:0.0.0</chart>
+                </release>
+              </releases>
+            </configuration>
           </execution>
         </executions>
       </plugin>

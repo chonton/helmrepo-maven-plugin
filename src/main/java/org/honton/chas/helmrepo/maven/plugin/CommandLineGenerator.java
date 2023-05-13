@@ -1,26 +1,34 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
+import lombok.Getter;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class CommandLineGenerator {
 
-  private StringBuilder sb = new StringBuilder("helm ");
+  @Getter
+  private List<String> command = new ArrayList<>();
+
+  public CommandLineGenerator() {
+    command.add("helm");
+  }
 
   public CommandLineGenerator upgrade() {
-    sb.append("upgrade --install ");
+    command.add("upgrade");
+    command.add("--install");
     return this;
   }
 
   public CommandLineGenerator uninstall() {
-    sb.append("uninstall ");
+    command.add("uninstall");
     return this;
   }
 
   public CommandLineGenerator appendRelease(ReleaseInfo release) {
-    sb.append(release.getName()).append(' ').append(release.getChart());
+    command.add(release.getName());
+    command.add(release.getChart());
     return this;
-  }
-
-  public String getCommand() {
-    return sb.toString();
   }
 
   public CommandLineGenerator appendGlobalReleaseOptions(GlobalReleaseOptions options) {
@@ -35,12 +43,14 @@ public class CommandLineGenerator {
     if (kubernetes != null) {
       String context = kubernetes.getContext();
       if (context != null) {
-        sb.append(" --kube-context ").append(context);
+        command.add("--kube-context");
+        command.add(context);
       }
     }
     return this;
   }
 
-  private void appendValues(String valueYaml) {}
-
+  private void appendValues(String valueYaml) {
+    // TODO: !!!!!!!!
+  }
 }
