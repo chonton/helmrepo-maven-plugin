@@ -3,6 +3,7 @@ package org.honton.chas.helmrepo.maven.plugin;
 import lombok.Getter;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,11 +19,11 @@ public class CommandLineGenerator {
     behavior.addSubCommand(command);
   }
 
-  public CommandLineGenerator appendRelease(ReleaseInfo release, CommandOptions behavior) throws IOException {
+  public CommandLineGenerator appendRelease(ReleaseInfo release, CommandOptions options) throws IOException {
     command.add(release.getName());
-    String chartName = behavior.chartReference(release);
+    String chartName = options.chartReference(release);
     if (chartName != null) {
-      command.add(release.getChart());
+      command.add(chartName);
     }
 
     if (release.getNamespace() != null) {
@@ -36,9 +37,13 @@ public class CommandLineGenerator {
       command.add(release.getWait() + "s");
     }
 
-    if (release.getValueYaml() != null) {
-      Path valuePath = behavior.releaseValues(release);
-      appendValues(valuePath);
+    String yamlContent = release.getValueYaml();
+    if (yamlContent != null) {
+      Path yamlPath = options.releaseValues(release.getName() + ".yaml");
+      if (yamlPath != null) {
+        Files.writeString(yamlPath, yamlContent);
+        appendValues(yamlPath);
+      }
     }
 
     return this;
@@ -47,12 +52,15 @@ public class CommandLineGenerator {
   public CommandLineGenerator appendGlobalReleaseOptions(CommandOptions options) {
     if (options != null) {
       appendKubernetes(options.getKubernetes());
-      appendValues(options.getGlobalValuePath());
+      Path globalValuePath = options.getGlobalValuePath();
+      if (globalValuePath != null) {
+        appendValues(globalValuePath);
+      }
     }
     return this;
   }
 
-  private CommandLineGenerator appendKubernetes(KubernetesInfo kubernetes) {
+  private void appendKubernetes(KubernetesInfo kubernetes) {
     if (kubernetes != null) {
       String context = kubernetes.getContext();
       if (context != null) {
@@ -60,13 +68,10 @@ public class CommandLineGenerator {
         command.add(context);
       }
     }
-    return this;
   }
 
   private void appendValues(Path valuePath) {
-    if (valuePath != null) {
-      command.add("--values");
-      command.add(valuePath.toString());
-    }
+    command.add("--values");
+    command.add(valuePath.toString());
   }
 }

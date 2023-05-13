@@ -2,8 +2,6 @@ package org.honton.chas.helmrepo.maven.plugin;
 
 import org.apache.commons.io.input.ReaderInputStream;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -64,7 +62,7 @@ public class HelmPackage extends HelmGoal {
   @Component
   MavenProjectHelper projectHelper;
 
-  protected final void doExecute() throws MojoFailureException, MojoExecutionException {
+  protected final void doExecute() throws IOException {
     DefaultFileSet fileSet = DefaultFileSet.fileSet(chartDir.getParentFile());
     fileSet.setIncludes(new String[]{chartDir.getName() + "/**/*.*"});
     if (filter) {
@@ -74,11 +72,7 @@ public class HelmPackage extends HelmGoal {
     TarGZipArchiver archiver = new TarGZipArchiver();
     archiver.addFileSet(fileSet);
     archiver.setDestFile(destFile);
-    try {
-      archiver.createArchive();
-    } catch (IOException ioException) {
-      throw new MojoExecutionException(ioException);
-    }
+    archiver.createArchive();
 
     if (attach) {
       projectHelper.attachArtifact(project, "tgz", destFile);

@@ -3,8 +3,6 @@ package org.honton.chas.helmrepo.maven.plugin;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,10 +25,8 @@ public class HelmUpgrade extends HelmRelease {
   }
 
   @Override
-  public Path releaseValues(ReleaseInfo info) throws IOException {
-    Path releaseValuesPath = targetValuesPath.resolve(info.getName());
-    Files.writeString(releaseValuesPath, info.getValueYaml());
-    return releaseValuesPath;
+  public Path releaseValues(String valuesFileName) {
+    return targetValuesPath.resolve(valuesFileName);
   }
 
   @Override

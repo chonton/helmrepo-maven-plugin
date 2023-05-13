@@ -1,11 +1,6 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
-
-import java.io.File;
 
 /** Information about a helm release */
 @Data

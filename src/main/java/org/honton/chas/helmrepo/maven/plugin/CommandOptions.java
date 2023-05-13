@@ -1,6 +1,5 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,9 +15,10 @@ public interface CommandOptions extends GlobalReleaseOptions {
   String chartReference(ReleaseInfo info);
 
   /**
-   * Given that info.valueYaml is not empty, write the content into a file and return the location of the file.  If no values option should be generated, return null.
+   * Given that info.valueYaml is not empty, return the location of the file.
+   * If no values option should be generated, return null.
    */
-  Path releaseValues(ReleaseInfo info) throws IOException;
+  Path releaseValues(String valuesFileName);
 
   /**
    * Given a list of releases, return an iterator that determines the traversal order

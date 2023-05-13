@@ -3,7 +3,6 @@ package org.honton.chas.helmrepo.maven.plugin;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.eclipse.aether.RepositorySystem;
@@ -12,7 +11,10 @@ import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactRequest;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -45,10 +47,6 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   @Getter
   KubernetesInfo kubernetes;
 
-  @Parameter(defaultValue = "${project.build.directory}/helm-values", required = true, readonly = true)
-  File targetValuesDir;
-  Path targetValuesPath;
-
   /**
    * The entry point to Maven Artifact Resolver, i.e. the component doing all the work.
    */
@@ -71,9 +69,16 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   @Getter
   Path globalValuePath;
 
-  protected final void doExecute() throws MojoFailureException, MojoExecutionException, IOException {
-    targetValuesPath = Files.createDirectories(targetValuesDir.toPath());
-    globalValuePath = valueYaml != null ? Files.writeString(targetValuesPath.resolve("_.yaml"), valueYaml) : null;
+  Path targetValuesPath;
+
+  protected final void doExecute() throws MojoExecutionException, IOException {
+    targetValuesPath = Files.createDirectories(Path.of("target", "helm-values"));
+    if (valueYaml != null) {
+      globalValuePath = releaseValues("_.yaml");
+      if (globalValuePath != null) {
+        Files.writeString(globalValuePath, valueYaml);
+      }
+    }
 
     for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
       CommandLineGenerator generator = new CommandLineGenerator(this)
@@ -92,7 +97,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     }
   }
 
-  private void executeHelmCommand(List<String> command) throws MojoExecutionException {
+  private void executeHelmCommand(List<String> command) throws MojoExecutionException, IOException {
     try {
       getLog().info(String.join(" ", command));
       Process process = new ProcessBuilder(command).start();
@@ -106,9 +111,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new MojoExecutionException(e);
-    } catch (IOException e) {
-      throw new MojoExecutionException(e);
+      throw new MojoExecutionException(e.getMessage(), e);
     }
   }
 
@@ -191,16 +194,14 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   /**
    * Fetch the artifact and return the local location
    *
-   * @param chart
+   * @param chart The artifact to fetch
    * @return The local file location
    */
   @SneakyThrows
   private String localArtifact(String chart) {
-    ArtifactRequest request = new ArtifactRequest();
     DefaultArtifact gav = new DefaultArtifact(chart);
-    request.setArtifact(new DefaultArtifact(gav.getGroupId(), gav.getArtifactId(), "tgz", gav.getVersion()));
-    request.setRepositories(remoteRepos);
-
+    DefaultArtifact chartArtifact = new DefaultArtifact(gav.getGroupId(), gav.getArtifactId(), "tgz", gav.getVersion());
+    ArtifactRequest request = new ArtifactRequest(chartArtifact, remoteRepos, null);
     return repoSystem.resolveArtifact(repoSession, request).getArtifact().getFile().getAbsolutePath();
   }
 }

@@ -68,7 +68,7 @@
     <!-- use com.github.github:site-maven-plugin instead of org.apache.maven.plugins:maven-site-plugin -->
     <maven.site.deploy.skip>true</maven.site.deploy.skip>
 
-    <maven.version>3.8.5</maven.version>
+    <maven.version>3.2.5</maven.version>
     <plugin-plugin.version>3.8.2</plugin-plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -196,7 +196,7 @@
             <configuration>
               <rules>
                 <requireMavenVersion>
-                  <version>3.2.5</version>
+                  <version>${maven.version}</version>
                 </requireMavenVersion>
               </rules>
             </configuration>
@@ -239,7 +239,7 @@
 
       <plugin>
         <artifactId>maven-invoker-plugin</artifactId>
-        <version>3.1.0</version>
+        <version>3.5.1</version>
         <configuration>
           <filterProperties>
             <localRepository>${project.build.directory}/it-repo</localRepository>
@@ -303,7 +303,7 @@
       <plugin>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok-maven-plugin</artifactId>
-        <version>1.18.20.0</version>
+        <version>1.18.18.0</version>
         <configuration>
           <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           <outputDirectory>${delombok.output}</outputDirectory>
@@ -365,7 +365,7 @@
   </reporting>
 
   <profiles>
-    <!-- publish site to github,
+    <!-- publish site to GitHub,
     1. mvn [clean install] site
     2. mvn -P gh-pages pre-site
     -->
@@ -373,7 +373,7 @@
       <id>gh-pages</id>
       <build>
         <plugins>
-          <!-- push stage to github gh-pages -->
+          <!-- push stage to GitHub gh-pages -->
           <plugin>
             <groupId>com.github.github</groupId>
             <artifactId>site-maven-plugin</artifactId>

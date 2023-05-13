@@ -3,7 +3,6 @@ package org.honton.chas.helmrepo.maven.plugin;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,7 +24,7 @@ public class HelmUninstall extends HelmRelease {
   }
 
   @Override
-  public Path releaseValues(ReleaseInfo info) {
+  public Path releaseValues(String valuesFileName) {
     return null;
   }
 
