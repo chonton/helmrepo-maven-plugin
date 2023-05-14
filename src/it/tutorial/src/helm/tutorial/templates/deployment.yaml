@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    com.docker.project: {{ .Release.Name }}
+  name: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      com.docker.project: {{ .Release.Name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        com.docker.project: {{ .Release.Name }}
+    spec:
+      containers:
+        - image: docker/getting-started
+          name: {{ .Release.Name }}
+          ports:
+            - containerPort: 80
+              protocol: TCP
+      restartPolicy: Always

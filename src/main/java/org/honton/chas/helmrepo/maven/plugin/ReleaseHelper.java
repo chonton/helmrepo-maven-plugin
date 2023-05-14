@@ -1,10 +1,9 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import lombok.experimental.UtilityClass;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.experimental.UtilityClass;
 
 @UtilityClass
 class ReleaseHelper {
@@ -42,5 +41,4 @@ class ReleaseHelper {
     }
     return parts.length == N_GAV_SEGMENTS;
   }
-
 }

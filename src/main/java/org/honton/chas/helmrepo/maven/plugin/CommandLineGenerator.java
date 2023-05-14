@@ -1,17 +1,15 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import lombok.Getter;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
 
 public class CommandLineGenerator {
 
-  @Getter
-  private final List<String> command;
+  @Getter private final List<String> command;
 
   public CommandLineGenerator(CommandOptions behavior) {
     command = new ArrayList<>();
@@ -19,7 +17,8 @@ public class CommandLineGenerator {
     behavior.addSubCommand(command);
   }
 
-  public CommandLineGenerator appendRelease(ReleaseInfo release, CommandOptions options) throws IOException {
+  public CommandLineGenerator appendRelease(ReleaseInfo release, CommandOptions options)
+      throws IOException {
     command.add(release.getName());
     String chartName = options.chartReference(release);
     if (chartName != null) {

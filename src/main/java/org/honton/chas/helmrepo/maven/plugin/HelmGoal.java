@@ -1,19 +1,14 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
+import java.io.IOException;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import java.io.IOException;
-
-/**
- * Helm goal base functionality
- */
+/** Helm goal base functionality */
 public abstract class HelmGoal extends AbstractMojo {
-  /**
-   * Skip upgrade
-   */
+  /** Skip upgrade */
   @Parameter(property = "helm.skip", defaultValue = "false")
   boolean skip;
 
@@ -29,5 +24,5 @@ public abstract class HelmGoal extends AbstractMojo {
     }
   }
 
-  protected abstract void doExecute() throws  MojoExecutionException, IOException;
+  protected abstract void doExecute() throws MojoExecutionException, IOException;
 }

@@ -4,7 +4,7 @@
 
   <groupId>org.honton.chas</groupId>
   <artifactId>helmrepo-maven-plugin</artifactId>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <packaging>maven-plugin</packaging>
 
   <name>Helm Repo Maven Plugin</name>
@@ -56,6 +56,7 @@
 
   <properties>
     <delombok.output>${project.build.directory}/delombok</delombok.output>
+    <git-code-format-maven-plugin.version>4.2</git-code-format-maven-plugin.version>
     <javadoc-plugin.version>3.5.0</javadoc-plugin.version>
     <lombok.version>1.18.26</lombok.version>
 
@@ -74,6 +75,12 @@
   </properties>
 
   <dependencies>
+
+    <dependency>
+      <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-client</artifactId>
+      <version>6.6.1</version>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -132,6 +139,27 @@
 
   <build>
     <plugins>
+
+      <plugin>
+        <groupId>com.cosium.code</groupId>
+        <artifactId>git-code-format-maven-plugin</artifactId>
+        <version>${git-code-format-maven-plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>com.cosium.code</groupId>
+            <artifactId>google-java-format</artifactId>
+            <version>${git-code-format-maven-plugin.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>format-code</id>
+            <goals>
+              <goal>format-code</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>io.github.floverfelt</groupId>
@@ -210,34 +238,6 @@
       </plugin>
 
       <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.3.0</version>
-      </plugin>
-
-      <plugin>
-        <artifactId>maven-plugin-plugin</artifactId>
-        <version>${plugin-plugin.version}</version>
-        <configuration>
-          <goalPrefix>helmrepo</goalPrefix>
-          <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
-        </configuration>
-        <executions>
-          <execution>
-            <id>mojo-descriptor</id>
-            <goals>
-              <goal>descriptor</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>help-goal</id>
-            <goals>
-              <goal>helpmojo</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
         <artifactId>maven-invoker-plugin</artifactId>
         <version>3.5.1</version>
         <configuration>
@@ -281,6 +281,44 @@
             <configuration>
               <invokerTest>install</invokerTest>
             </configuration>
+          </execution>
+          <execution>
+            <id>20-integration-tests</id>
+            <goals>
+              <goal>run</goal>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <invokerTest>tutorial</invokerTest>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-plugin-plugin</artifactId>
+        <version>${plugin-plugin.version}</version>
+        <configuration>
+          <goalPrefix>helmrepo</goalPrefix>
+          <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+        </configuration>
+        <executions>
+          <execution>
+            <id>mojo-descriptor</id>
+            <goals>
+              <goal>descriptor</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>help-goal</id>
+            <goals>
+              <goal>helpmojo</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

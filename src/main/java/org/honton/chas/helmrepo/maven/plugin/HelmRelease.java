@@ -1,16 +1,5 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import lombok.Getter;
-import lombok.SneakyThrows;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.resolution.ArtifactRequest;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,54 +13,48 @@ import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import lombok.Getter;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
 
 public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptions, CommandOptions {
 
-  /**
-   * List of releases to upgrade
-   */
-  @Parameter
-  List<ReleaseInfo> releases;
+  /** List of releases to upgrade */
+  @Parameter List<ReleaseInfo> releases;
 
-  /**
-   * Values to be applied during upgrade. This is formatted as yaml.
-   */
-  @Parameter
-  @Getter
-  String valueYaml;
+  /** Values to be applied during upgrade. This is formatted as yaml. */
+  @Parameter @Getter String valueYaml;
 
-  /**
-   * Information about the kubernetes cluster
-   */
-  @Parameter
-  @Getter
-  KubernetesInfo kubernetes;
+  /** Information about the kubernetes cluster */
+  @Parameter @Getter KubernetesInfo kubernetes;
 
-  /**
-   * The entry point to Maven Artifact Resolver, i.e. the component doing all the work.
-   */
-  @Component
-  RepositorySystem repoSystem;
+  /** The entry point to Maven Artifact Resolver, i.e. the component doing all the work. */
+  @Component RepositorySystem repoSystem;
 
-  /**
-   * The current repository/network configuration of Maven.
-   */
+  /** The current repository/network configuration of Maven. */
   @Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
   RepositorySystemSession repoSession;
 
-  /**
-   * The project's remote repositories to use for the resolution.
-   */
+  /** The project's remote repositories to use for the resolution. */
   @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
   List<RemoteRepository> remoteRepos;
 
   // global values path
-  @Getter
-  Path globalValuePath;
+  @Getter Path globalValuePath;
 
   Path targetValuesPath;
 
-  protected final void doExecute() throws MojoExecutionException, IOException {
+  protected void doExecute() throws MojoExecutionException, IOException {
+    if (!validateConfiguration()) {
+      throw new MojoExecutionException("Invalid configuration");
+    }
     targetValuesPath = Files.createDirectories(Path.of("target", "helm-values"));
     if (valueYaml != null) {
       globalValuePath = releaseValues("_.yaml");
@@ -81,13 +64,46 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     }
 
     for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
-      CommandLineGenerator generator = new CommandLineGenerator(this)
-          .appendGlobalReleaseOptions(this)
-          .appendRelease(release, this);
+      CommandLineGenerator generator =
+          new CommandLineGenerator(this)
+              .appendGlobalReleaseOptions(this)
+              .appendRelease(release, this);
 
       executeHelmCommand(generator.getCommand());
+      postRelease(release);
     }
   }
+
+  protected boolean validateConfiguration() {
+    if (releases == null) {
+      return true;
+    }
+    long nErrors = releases.stream().filter(this::validateRelease).count();
+    return nErrors == 0;
+  }
+
+  /** Each Release must have proper release name and chart */
+  protected boolean validateRelease(ReleaseInfo release) {
+    String chart = release.getChart();
+    if (chart == null) {
+      getLog().error("Missing chart in " + release);
+      return true;
+    }
+    if (release.getName() == null) {
+      release.setName(ReleaseHelper.unversionedName(chart));
+    }
+    if (ReleaseHelper.isMavenArtifact(chart)) {
+      try {
+        release.setChart(localArtifact(chart));
+      } catch (ArtifactResolutionException e) {
+        getLog().error("Cannot find artifact " + chart);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  protected void postRelease(ReleaseInfo release) {}
 
   void pumpLog(InputStream is, Consumer<String> lineConsumer) {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
@@ -124,8 +140,8 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
 
     releases.forEach(
         release -> {
-          canonicalize(release);
-          ReleaseState requirements = new ReleaseState(release, ReleaseHelper.asSet(release.getRequires()));
+          ReleaseState requirements =
+              new ReleaseState(release, ReleaseHelper.asSet(release.getRequires()));
           if (releaseToRequirements.put(release.getName(), requirements) != null) {
             throw new IllegalStateException("duplicate definition of " + release.getName());
           }
@@ -176,32 +192,20 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   }
 
   /**
-   * Each Release must have proper release name and chart
-   */
-  private void canonicalize(ReleaseInfo release) {
-    String chart = release.getChart();
-    if (chart == null) {
-      throw new IllegalArgumentException("Release must have chart information");
-    }
-    if (release.getName() == null) {
-      release.setName(ReleaseHelper.unversionedName(chart));
-    }
-    if (ReleaseHelper.isMavenArtifact(chart)) {
-      release.setChart(localArtifact(chart));
-    }
-  }
-
-  /**
    * Fetch the artifact and return the local location
    *
    * @param chart The artifact to fetch
    * @return The local file location
    */
-  @SneakyThrows
-  private String localArtifact(String chart) {
+  private String localArtifact(String chart) throws ArtifactResolutionException {
     DefaultArtifact gav = new DefaultArtifact(chart);
-    DefaultArtifact chartArtifact = new DefaultArtifact(gav.getGroupId(), gav.getArtifactId(), "tgz", gav.getVersion());
+    DefaultArtifact chartArtifact =
+        new DefaultArtifact(gav.getGroupId(), gav.getArtifactId(), "tgz", gav.getVersion());
     ArtifactRequest request = new ArtifactRequest(chartArtifact, remoteRepos, null);
-    return repoSystem.resolveArtifact(repoSession, request).getArtifact().getFile().getAbsolutePath();
+    return repoSystem
+        .resolveArtifact(repoSession, request)
+        .getArtifact()
+        .getFile()
+        .getAbsolutePath();
   }
 }

@@ -10,6 +10,7 @@
   <modules>
     <module>package</module>
     <module>install</module>
+    <module>tutorial</module>
   </modules>
 
   <properties>
@@ -100,7 +101,7 @@
         <plugin>
           <groupId>org.honton.chas</groupId>
           <artifactId>helmrepo-maven-plugin</artifactId>
-          <version>0.0.1</version>
+          <version>0.0.2</version>
         </plugin>
 
       </plugins>

@@ -1,5 +1,6 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
+import java.util.List;
 import lombok.Data;
 
 /** Information about a helm release */
@@ -13,6 +14,7 @@ public class ReleaseInfo {
 
   /**
    * The chart for this release. This can be one of
+   *
    * <ul>
    *   <li>A chart reference: repository/chartname
    *   <li>A path to a packaged chart: superfantastic-44.12.3.tgz
@@ -24,18 +26,18 @@ public class ReleaseInfo {
    */
   private String chart;
 
-  /**
-   * Values to be applied during upgrade. This is formatted as yaml.
-   */
+  /** Values to be applied during upgrade. This is formatted as yaml. */
   private String valueYaml;
 
-  /**
-   * A comma separated list of releases that must be deployed before this release.
-   */
+  /** A comma separated list of releases that must be deployed before this release. */
   private String requires;
 
   /**
-   * Number of seconds to wait for successful deployment.  Defaults to 300 secs (5 minutes)
+   * Mapping service and port name to maven property name. The maven property will be set to the
+   * corresponding kubernetes service exposed port.
    */
+  private List<PortSelector> nodePorts;
+
+  /** Number of seconds to wait for successful deployment. Defaults to 300 secs (5 minutes) */
   private long wait;
 }

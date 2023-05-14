@@ -18,11 +18,11 @@ phase.
 
 # Plugin
 
-Plugin reports available at [plugin info](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/plugin-info.html).
+Plugin reports available at [plugin info](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/plugin-info.html).
 
 ## Upgrade Goal
 
-The [upgrade](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/upgrade.html) goal binds by default to the
+The [upgrade](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/upgrade.html) goal binds by default to the
 **pre-integration-test** phase. This goal will execute `helm upgrade --install` for each release. If the release name is
 not specified, the name will be derived from the chart name.
 
@@ -41,6 +41,7 @@ not specified, the name will be derived from the chart name.
 |      name | *Un-versioned chart name* | Name of the release                                                        |
 | namespace | *kubectl context default* | Namespace for un-scoped kubernetes resources                               |
 |  requires |             -             | Comma separated list of releases that must be deployed before this release |
+| nodePorts |             -             | Set Maven property from specified K8s service/port NodePort                |
 | valueYaml |             -             | Values to be applied to release, formatted as yaml                         |
 |      wait |            300            | Number of seconds to wait for successful deployment                        |
 
@@ -55,15 +56,22 @@ A chart name can be any of the following:
 5. Chart reference: *repository/chartname*
 6. OCI registry URL: *oci://example.com/charts/nginx*
 
+#### Service NodePorts
+
+Kubernetes has a network mapping of host ports to pod ports. During integration test, we need to use the host port
+instead of the target port. With NodePort and LoadBalancer service types, the nodePort is unlikely to equal targetPort
+value. After each release is upgraded, the **upgrade** goal will set specified maven properties to the assigned nodePort
+values.
+
 ## Uninstall Goal
 
-The [uninstall](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/uninstall.html) goal binds by default to the
+The [uninstall](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/uninstall.html) goal binds by default to the
 **post-integration-test** phase. This goal will execute `helm uninstall` for each release. Configuration is similar to
-the **install** goal; the **valueYaml** parameter is ignored.
+the **install** goal; the **valueYaml** and **servicePorts** parameters are ignored.
 
 ## Package Goal
 
-The [package](https://chonton.github.io/helmrepo-maven-plugin/0.0.1/package.html) goal binds by default to the
+The [package](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/package.html) goal binds by default to the
 **package** phase. This goal will create a helm package from the chart source. Content will be
 [filtered](https://maven.apache.org/plugins/maven-resources-plugin/examples/filter.html) using maven properties.
 Resulting *.tgz* artifact is attached as a secondary artifact for the build. The helm package will be installed in the
@@ -90,7 +98,7 @@ phase.
       <plugin>
         <groupId>org.honton.chas</groupId>
         <artifactId>helmrepo-maven-plugin</artifactId>
-        <version>0.0.1</version>
+        <version>0.0.2</version>
       </plugin>
     </plugins>
   </pluginManagement>
@@ -124,6 +132,13 @@ nested:
   - two
 ]]>
             </valueYaml>
+            <nodePorts>
+              <nodePort>
+                <portName>http</portName>
+                <propertyName>report.port</propertyName>
+                <serviceName>test-reports</serviceName>
+              </nodePort>
+            </nodePorts>
           </release>
           <release>
             <name>report-job</name>
@@ -136,4 +151,14 @@ nested:
     </plugin>
   </plugins>
 </build>
+```
+
+# Common Errors
+
+## Incorrectly Named Chart
+
+If the **package** goal fails with the following error, your chart directory is probably misnamed.
+
+```text
+[ERROR] Failed to execute goal org.honton.chas:helmrepo-maven-plugin:0.0.2:package (tutorial) on project tutorial: Execution tutorial of goal org.honton.chas:helmrepo-maven-plugin:0.0.2:package failed: archive cannot be empty -> [Help 1]
 ```
