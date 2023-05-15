@@ -6,9 +6,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
 import java.util.Properties;
 import org.apache.commons.io.input.ReaderInputStream;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -17,7 +21,6 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
 import org.codehaus.plexus.archiver.tar.TarGZipArchiver;
 import org.codehaus.plexus.archiver.util.DefaultFileSet;
-import org.codehaus.plexus.components.io.resources.PlexusIoResource;
 import org.codehaus.plexus.interpolation.AbstractValueSource;
 import org.codehaus.plexus.interpolation.Interpolator;
 import org.codehaus.plexus.interpolation.InterpolatorFilterReader;
@@ -25,6 +28,7 @@ import org.codehaus.plexus.interpolation.ObjectBasedValueSource;
 import org.codehaus.plexus.interpolation.PrefixedValueSourceWrapper;
 import org.codehaus.plexus.interpolation.PropertiesBasedValueSource;
 import org.codehaus.plexus.interpolation.StringSearchInterpolator;
+import org.yaml.snakeyaml.Yaml;
 
 /** Package a helm chart and attach as secondary artifact */
 @Mojo(name = "package", defaultPhase = LifecyclePhase.PACKAGE, threadSafe = true)
@@ -58,11 +62,20 @@ public class HelmPackage extends HelmGoal {
 
   @Component MavenProjectHelper projectHelper;
 
-  protected final void doExecute() throws IOException {
+  protected final void doExecute() throws MojoExecutionException, IOException {
+    if (chartDir.isDirectory()) {
+      checkChartFile();
+      packageChart();
+    } else {
+      getLog().info("No helm chart found, skipping 'package'");
+    }
+  }
+
+  private void packageChart() throws IOException {
     DefaultFileSet fileSet = DefaultFileSet.fileSet(chartDir.getParentFile());
     fileSet.setIncludes(new String[] {chartDir.getName() + "/**/*.*"});
     if (filter) {
-      fileSet.setStreamTransformer(this::createStream);
+      fileSet.setStreamTransformer((r, is) -> createStream(is));
     }
 
     TarGZipArchiver archiver = new TarGZipArchiver();
@@ -75,7 +88,24 @@ public class HelmPackage extends HelmGoal {
     }
   }
 
-  private InputStream createStream(PlexusIoResource plexusIoResource, InputStream inputStream) {
+  private void checkChartFile() throws IOException {
+    Path chartFile = chartDir.toPath().resolve("Chart.yaml");
+    if (!Files.isReadable(chartFile)) {
+      String error = "Cannot read " + chartFile;
+      getLog().error(error);
+      throw new IOException(error);
+    }
+
+    Map<String, String> chart = new Yaml().load(createStream(Files.newInputStream(chartFile)));
+    if (!project.getArtifactId().equals(chart.get("name"))) {
+      String error = "Chart name does not equal the required value of " + project.getArtifactId();
+      getLog().error(error);
+      throw new IOException(error);
+    }
+    SemVer.valueOf(chart.get("version"));
+  }
+
+  private InputStream createStream(InputStream inputStream) {
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
     return new ReaderInputStream(
