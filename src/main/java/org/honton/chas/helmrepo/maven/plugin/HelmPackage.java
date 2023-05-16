@@ -2,17 +2,15 @@ package org.honton.chas.helmrepo.maven.plugin;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Properties;
 import org.apache.commons.io.input.ReaderInputStream;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -41,12 +39,9 @@ public class HelmPackage extends HelmGoal {
   @Parameter(defaultValue = "true")
   boolean filter;
 
-  /**
-   * Directory path which holds the chart to package. Last segment of path should match
-   * ${project.artifactId} for helm to be able to use
-   */
-  @Parameter(defaultValue = "src/helm/${project.artifactId}")
-  File chartDir;
+  /** Directory which holds an unpacked chart. Chart must be named ${project.artifactId} */
+  @Parameter(defaultValue = "src/helm")
+  File helmDir;
 
   @Parameter(
       defaultValue = "${project.build.directory}/${project.artifactId}-${project.version}.tgz",
@@ -62,18 +57,42 @@ public class HelmPackage extends HelmGoal {
 
   @Component MavenProjectHelper projectHelper;
 
-  protected final void doExecute() throws MojoExecutionException, IOException {
-    if (chartDir.isDirectory()) {
-      checkChartFile();
-      packageChart();
-    } else {
-      getLog().info("No helm chart found, skipping 'package'");
+  protected final void doExecute() throws IOException {
+    if (helmDir.isDirectory()) {
+      File chartDir = new File(helmDir, project.getArtifactId());
+      if (chartDir.isDirectory()) {
+        checkChartFile(chartDir);
+        packageChart(helmDir);
+        return;
+      }
     }
+    getLog().info("Helm chart not found, skipping 'package'");
   }
 
-  private void packageChart() throws IOException {
-    DefaultFileSet fileSet = DefaultFileSet.fileSet(chartDir.getParentFile());
-    fileSet.setIncludes(new String[] {chartDir.getName() + "/**/*.*"});
+  private void checkChartFile(File chartDir) throws IOException {
+    File chartFile = new File(chartDir, "Chart.yaml");
+    if (!chartFile.canRead()) {
+      String error = "Cannot read " + chartFile;
+      getLog().error(error);
+      throw new IOException(error);
+    }
+
+    InputStream is = new FileInputStream(chartFile);
+    if (filter) {
+      is = createStream(is);
+    }
+    Map<String, String> chart = new Yaml().load(is);
+    if (!project.getArtifactId().equals(chart.get("name"))) {
+      String error = "Chart name does not equal the required value of " + project.getArtifactId();
+      getLog().error(error);
+      throw new IOException(error);
+    }
+    SemVer.valueOf(chart.get("version"));
+  }
+
+  private void packageChart(File helmDir) throws IOException {
+    DefaultFileSet fileSet = DefaultFileSet.fileSet(helmDir);
+    fileSet.setIncludes(new String[] {project.getArtifactId() + "/**/*.*"});
     if (filter) {
       fileSet.setStreamTransformer((r, is) -> createStream(is));
     }
@@ -88,23 +107,6 @@ public class HelmPackage extends HelmGoal {
     } else if (attach) {
       projectHelper.attachArtifact(project, "tgz", destFile);
     }
-  }
-
-  private void checkChartFile() throws IOException {
-    Path chartFile = chartDir.toPath().resolve("Chart.yaml");
-    if (!Files.isReadable(chartFile)) {
-      String error = "Cannot read " + chartFile;
-      getLog().error(error);
-      throw new IOException(error);
-    }
-
-    Map<String, String> chart = new Yaml().load(createStream(Files.newInputStream(chartFile)));
-    if (!project.getArtifactId().equals(chart.get("name"))) {
-      String error = "Chart name does not equal the required value of " + project.getArtifactId();
-      getLog().error(error);
-      throw new IOException(error);
-    }
-    SemVer.valueOf(chart.get("version"));
   }
 
   private InputStream createStream(InputStream inputStream) {

@@ -80,11 +80,11 @@ phase.
 
 ### Configuration
 
-| Parameter | Default                        | Description                                                                                                                         |
-|-----------|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| attach    | true                           | Attach helm package as a secondary artifact of the build                                                                            |
-| filter    | true                           | Interpolate chart contents, replacing *${variable}* with the variable's content                                                     |
-| chartDir  | src/helm/${project.artifactId} | Directory path which holds the chart to package. Last segment of path should match ${project.artifactId} for helm to be able to use |
+| Parameter | Default  | Description                                                     |
+|----------:|:--------:|:----------------------------------------------------------------|
+|    attach |   true   | Attach helm package as a secondary artifact of the build        |
+|    filter |   true   | Interpolate chart contents, expanding *${variable}* expressions |
+|   helmDir | src/helm | Directory holding an unpacked chart named ${project.artifactId} |
 
 ## tgz Packaging Extension
 
