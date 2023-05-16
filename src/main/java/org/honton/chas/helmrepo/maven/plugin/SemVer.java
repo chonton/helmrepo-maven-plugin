@@ -3,6 +3,7 @@ package org.honton.chas.helmrepo.maven.plugin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.IntPredicate;
 import lombok.NonNull;
 import lombok.Value;
 
@@ -22,112 +23,106 @@ public class SemVer {
   static final class VersionParser {
 
     private final String source;
-    private int currentPosition = 0;
+    private int offset = 0;
 
     public VersionParser(@NonNull String s) {
       source = s;
     }
 
-    private static boolean isAsciiLetter(int ch) {
-      return ('A' <= ch && ch <= 'Z') || ('a' <= ch && ch <= 'z');
-    }
-
     SemVer parse() {
-      int major = readNumeric();
+      int major = numeric("major");
       consumeDot();
-      int minor = readNumeric();
+      int minor = numeric("minor");
       consumeDot();
-      int patch = readNumeric();
+      int patch = numeric("patch");
 
-      List<String> preRelease = peek() == '-' ? readSegments(false) : List.of();
-      List<String> build = peek() == '+' ? readSegments(true) : List.of();
+      List<String> preRelease = readSegments('-', true);
+      List<String> build = readSegments('+', false);
 
-      if (currentPosition < source.length()) {
+      if (offset < source.length()) {
         throw new IllegalArgumentException(
-            String.format("Unexpected characters in \"%s\" at %d", source, currentPosition - 1));
+            String.format("Unexpected characters in '%s' at %d", source, offset - 1));
       }
 
       return new SemVer(major, minor, patch, preRelease, build);
     }
 
-    private List<String> readSegments(boolean allowLeadingZero) {
+    private int numeric(String version) {
+      String numeric = identifier(version, Character::isDigit);
+      if (numeric.charAt(0) == '0' && numeric.length() > 1) {
+        throw new IllegalArgumentException(
+            String.format(
+                "No leading zero allowed in '%s' at position %d",
+                numeric, offset - numeric.length()));
+      }
+      return Integer.parseInt(numeric);
+    }
+
+    private List<String> readSegments(int leadChar, boolean preRelease) {
+      if (peek() != leadChar) {
+        return List.of();
+      }
       List<String> segments = new ArrayList<>();
       do {
-        segments.add(identifier(allowLeadingZero));
+        segments.add(identifier(preRelease));
       } while (peek() == '.');
       return Collections.unmodifiableList(segments);
     }
 
     private boolean noMoreToProcess() {
-      return currentPosition >= source.length();
+      return offset >= source.length();
     }
 
     private int peek() {
       if (noMoreToProcess()) {
         return -1;
       }
-      return source.charAt(currentPosition);
+      return source.charAt(offset);
+    }
+
+    private int get() {
+      return source.charAt(offset++);
     }
 
     private void consumeDot() {
       if (noMoreToProcess()) {
         throw new IllegalArgumentException(
-            String.format("Expected '.' in \"%s\" at position %d", source, currentPosition - 1));
+            String.format("Expected '.' in '%s' at position %d", source, offset - 1));
       }
-      int c = source.charAt(currentPosition++);
+      int c = get();
       if ('.' != c) {
         throw new IllegalArgumentException(
-            String.format(
-                "Expected '.', got '%c' in \"%s\" at position %d", c, source, currentPosition - 1));
+            String.format("Expected '.', got '%c' in '%s' at position %d", c, source, offset - 1));
       }
     }
 
-    private boolean isIdentifierCharacter() {
-      int c = peek();
-      return Character.isDigit(c) || isAsciiLetter(c) || c == '-';
+    private boolean isIdentifierCharacter(int c) {
+      return Character.isDigit(c) || ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || c == '-';
     }
 
-    private int readNumeric() {
-      return Integer.parseInt(numericIdentifier(false));
-    }
-
-    private String identifier(boolean leadingZeroAllowed) {
-      char toss = source.charAt(currentPosition);
-      if (Character.isDigit(toss) || isAsciiLetter(toss)) {
+    private String identifier(boolean preRelease) {
+      int toss = get();
+      if (toss != '+' && toss != '-' && toss != '.') {
         throw new IllegalStateException();
       }
-      ++currentPosition;
-      if (Character.isDigit(peek())) {
-        return numericIdentifier(leadingZeroAllowed);
+      if (preRelease) {
+        if (Character.isDigit(peek())) {
+          return identifier("numeric", Character::isDigit);
+        }
       }
-      return alphanumericIdentifier();
+      return identifier("alphanumeric", this::isIdentifierCharacter);
     }
 
-    private String numericIdentifier(boolean leadingZeroAllowed) {
-      int start = currentPosition;
-      while (Character.isDigit(peek())) {
-        currentPosition++;
+    private String identifier(String type, IntPredicate predicate) {
+      int start = offset;
+      while (predicate.test(peek())) {
+        offset++;
       }
-      if (start == currentPosition) {
+      if (start == offset) {
         throw new IllegalArgumentException(
-            String.format("Empty numeric identifier in \"%s\" at position %d", source, start));
+            String.format("Empty %s identifier '%s' at %d", type, source, start));
       }
-      if (!leadingZeroAllowed && source.charAt(start) == '0') {
-        currentPosition = start + 1;
-      }
-      return source.substring(start, currentPosition);
-    }
-
-    private String alphanumericIdentifier() {
-      int start = currentPosition;
-      while (isIdentifierCharacter()) {
-        currentPosition++;
-      }
-      if (start == currentPosition) {
-        throw new IllegalArgumentException(
-            String.format("Empty alphanumeric identifier \"%s\" at %d", source, start));
-      }
-      return source.substring(start, currentPosition);
+      return source.substring(start, offset);
     }
   }
 }

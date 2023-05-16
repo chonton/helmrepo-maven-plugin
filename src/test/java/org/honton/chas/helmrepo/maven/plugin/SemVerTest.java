@@ -21,14 +21,16 @@ class SemVerTest {
         "1.0.0-x-y-z.--",
         "1.0.0-alpha+001",
         "1.0.0+20130313144700",
-        "1.0.0-beta+exp.sha5114f85"
+        "1.0.0-beta+exp.sha.5114f85",
+        "1.0.0+21AF26D3----117B344092BD"
       })
   void parses(String good) {
     Assertions.assertDoesNotThrow(() -> SemVer.valueOf(good));
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"1.0.0-beta+exp.sha.5114f85", "1.0.0+21AF26D3----117B344092BD"})
+  @ValueSource(
+      strings = {"1", "1.0", "01.0.0", "1.2.3.4", "1.0.0-x..y", "1.2.3-prerelease+build+extra"})
   void doesNotParse(String bad) {
     Assertions.assertThrows(IllegalArgumentException.class, () -> SemVer.valueOf(bad));
   }
