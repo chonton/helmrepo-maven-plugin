@@ -83,7 +83,9 @@ public class HelmPackage extends HelmGoal {
     archiver.setDestFile(destFile);
     archiver.createArchive();
 
-    if (attach) {
+    if ("tgz".equals(project.getPackaging())) {
+      project.getArtifact().setFile(destFile);
+    } else if (attach) {
       projectHelper.attachArtifact(project, "tgz", destFile);
     }
   }

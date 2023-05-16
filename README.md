@@ -86,6 +86,12 @@ phase.
 | filter    | true                           | Interpolate chart contents, replacing *${variable}* with the variable's content                                                     |
 | chartDir  | src/helm/${project.artifactId} | Directory path which holds the chart to package. Last segment of path should match ${project.artifactId} for helm to be able to use |
 
+## tgz Packaging Extension
+
+This plugin can also be used as an extension that packages, installs, and deploys the **tgz** packaging type. Just set
+the top level **<packaging>** element to **tgz** and
+[register](https://maven.apache.org/guides/mini/guide-using-extensions.html) this plugin as an extension.
+
 # Examples
 
 ## Typical Use
@@ -151,6 +157,30 @@ nested:
     </plugin>
   </plugins>
 </build>
+```
+
+## Use as a packaging extension
+
+```xml
+
+<project>
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example.helm</groupId>
+  <artifactId>chart</artifactId>
+  <packaging>tgz</packaging>
+
+  <build>
+    <extensions>
+      <extension>
+        <groupId>org.honton.chas</groupId>
+        <artifactId>helmrepo-maven-plugin</artifactId>
+        <version>0.0.2</version>
+      </extension>
+    </extensions>
+  </build>
+
+</project>
 ```
 
 # Common Errors
