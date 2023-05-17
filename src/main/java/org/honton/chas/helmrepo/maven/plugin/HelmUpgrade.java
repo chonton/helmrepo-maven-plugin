@@ -7,10 +7,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.ServiceResource;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,21 +31,9 @@ public class HelmUpgrade extends HelmRelease {
   public void addSubCommand(List<String> command) {
     command.add("upgrade");
     command.add("--install");
-  }
-
-  @Override
-  public String chartReference(ReleaseInfo info) {
-    return info.getChart();
-  }
-
-  @Override
-  public Path releaseValues(String valuesFileName) {
-    return targetValuesPath.resolve(valuesFileName);
-  }
-
-  @Override
-  public Iterable<ReleaseInfo> getIterable(LinkedList<ReleaseInfo> inOrder) {
-    return inOrder;
+    if (kubernetes == null || !Boolean.FALSE.equals(kubernetes.getCreateNamespace())) {
+      command.add("--create-namespace");
+    }
   }
 
   @Override
@@ -85,7 +71,7 @@ public class HelmUpgrade extends HelmRelease {
   protected void postRelease(ReleaseInfo release) {
     List<PortSelector> portSelectors = release.getNodePorts();
     if (portSelectors != null) {
-      Map<String, List<Service>> services = getServices(release);
+      Map<String, List<Service>> services = getServices();
       portSelectors.forEach(
           selector -> {
             Service foundService = findService(release.getName(), services, selector);
@@ -171,8 +157,8 @@ public class HelmUpgrade extends HelmRelease {
     return port;
   }
 
-  private Map<String, List<Service>> getServices(ReleaseInfo release) {
-    ServiceList list = getServiceList(release.getNamespace());
+  private Map<String, List<Service>> getServices() {
+    ServiceList list = getServiceList();
     Map<String, List<Service>> nameToService = new HashMap<>();
     list.getItems()
         .forEach(
@@ -183,9 +169,10 @@ public class HelmUpgrade extends HelmRelease {
     return nameToService;
   }
 
-  private ServiceList getServiceList(String namespace) {
+  private ServiceList getServiceList() {
     KubernetesClient client = getKubernetesClient();
     MixedOperation<Service, ServiceList, ServiceResource<Service>> services = client.services();
+    String namespace = kubernetes != null ? kubernetes.getNamespace() : null;
     if (namespace != null) {
       return services.inNamespace(namespace).list();
     } else {
@@ -202,5 +189,14 @@ public class HelmUpgrade extends HelmRelease {
       }
     }
     return result;
+  }
+
+  @Override
+  public void releaseOptions(ReleaseInfo release, List<String> command) {
+    command.add("--wait");
+    if (release.getWait() != 0) {
+      command.add("--timeout");
+      command.add(release.getWait() + "s");
+    }
   }
 }

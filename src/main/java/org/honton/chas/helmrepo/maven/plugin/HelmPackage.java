@@ -58,15 +58,13 @@ public class HelmPackage extends HelmGoal {
   @Component MavenProjectHelper projectHelper;
 
   protected final void doExecute() throws IOException {
-    if (helmDir.isDirectory()) {
-      File chartDir = new File(helmDir, project.getArtifactId());
-      if (chartDir.isDirectory()) {
-        checkChartFile(chartDir);
-        packageChart(helmDir);
-        return;
-      }
+    File chartDir = new File(helmDir, project.getArtifactId());
+    if (helmDir.isDirectory() && chartDir.isDirectory()) {
+      checkChartFile(chartDir);
+      packageChart(helmDir);
+    } else {
+      getLog().info("Helm chart not found at " + chartDir + ", skipping 'package'");
     }
-    getLog().info("Helm chart not found, skipping 'package'");
   }
 
   private void checkChartFile(File chartDir) throws IOException {

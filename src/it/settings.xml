@@ -38,30 +38,4 @@
     </profile>
   </profiles>
 
-  <servers>
-    <server>
-      <id>with-auth</id>
-      <password>password123</password>
-      <username>user1</username>
-    </server>
-
-    <server>
-      <id>with-header-auth</id>
-      <configuration>
-        <httpHeaders>
-          <property>
-            <name>Job-Token</name>
-            <value>${env.USER}</value>
-          </property>
-        </httpHeaders>
-      </configuration>
-    </server>
-
-    <server>
-      <id>with-encrypted-auth</id>
-      <password>{I7HkMmPZFuUHIbvB+DgR//2VtObX1FSAwoCdjJCiVZ4=}</password>
-      <username>user1</username>
-    </server>
-  </servers>
-
 </settings>

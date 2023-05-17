@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -25,6 +27,9 @@ import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 
 public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptions, CommandOptions {
+
+  private static Pattern WARNING =
+      Pattern.compile("\\[?(warning)]?:? ?(.+)", Pattern.CASE_INSENSITIVE);
 
   /** List of releases to upgrade */
   @Parameter List<ReleaseInfo> releases;
@@ -48,7 +53,6 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
 
   // global values path
   @Getter Path globalValuePath;
-
   Path targetValuesPath;
 
   protected void doExecute() throws MojoExecutionException, IOException {
@@ -120,7 +124,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
 
       ForkJoinPool pool = ForkJoinPool.commonPool();
       pool.execute(() -> pumpLog(process.getInputStream(), getLog()::info));
-      pool.execute(() -> pumpLog(process.getErrorStream(), getLog()::error));
+      pool.execute(() -> pumpLog(process.getErrorStream(), this::logLine));
 
       if (process.waitFor() != 0) {
         throw new MojoExecutionException("helm exit value: " + process.exitValue());
@@ -128,6 +132,15 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new MojoExecutionException(e.getMessage(), e);
+    }
+  }
+
+  private void logLine(String s) {
+    Matcher matcher = WARNING.matcher(s);
+    if (matcher.matches()) {
+      getLog().warn(matcher.group(2));
+    } else {
+      getLog().error(s);
     }
   }
 
@@ -207,5 +220,23 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
         .getArtifact()
         .getFile()
         .getAbsolutePath();
+  }
+
+  @Override
+  public String chartReference(ReleaseInfo info) {
+    return info.getChart();
+  }
+
+  @Override
+  public void releaseOptions(ReleaseInfo release, List<String> command) throws IOException {}
+
+  @Override
+  public Iterable<ReleaseInfo> getIterable(LinkedList<ReleaseInfo> inOrder) {
+    return inOrder;
+  }
+
+  @Override
+  public Path releaseValues(String valuesFileName) {
+    return targetValuesPath.resolve(valuesFileName);
   }
 }

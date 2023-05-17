@@ -1,5 +1,6 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,4 +22,7 @@ public interface CommandOptions extends GlobalReleaseOptions {
 
   /** Add the helm subcommand to command line */
   void addSubCommand(List<String> commandLine);
+
+  /** Add any additional options per release */
+  void releaseOptions(ReleaseInfo release, List<String> commands) throws IOException;
 }

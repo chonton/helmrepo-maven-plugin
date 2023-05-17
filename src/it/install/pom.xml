@@ -23,6 +23,7 @@
             <id>install</id>
             <goals>
               <goal>package</goal>
+              <goal>template</goal>
               <goal>upgrade</goal>
               <goal>uninstall</goal>
             </goals>

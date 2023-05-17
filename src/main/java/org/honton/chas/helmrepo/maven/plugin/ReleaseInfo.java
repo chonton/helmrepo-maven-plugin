@@ -9,9 +9,6 @@ public class ReleaseInfo {
   /** The name of the release. Defaults to the unversioned chart name. */
   private String name;
 
-  /** The namespace for un-scoped kubernetes resources */
-  private String namespace;
-
   /**
    * The chart for this release. This can be one of
    *

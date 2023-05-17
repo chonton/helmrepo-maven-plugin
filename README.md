@@ -18,20 +18,21 @@ phase.
 
 # Plugin
 
-Plugin reports available at [plugin info](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/plugin-info.html).
+Plugin reports available at [plugin info](https://chonton.github.io/helmrepo-maven-plugin/0.0.3/plugin-info.html).
 
 ## Upgrade Goal
 
-The [upgrade](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/upgrade.html) goal binds by default to the
+The [upgrade](https://chonton.github.io/helmrepo-maven-plugin/0.0.3/upgrade.html) goal binds by default to the
 **pre-integration-test** phase. This goal will execute `helm upgrade --install` for each release. If the release name is
 not specified, the name will be derived from the chart name.
 
 ### Global Configuration
 
-|    Parameter |      Default      | Description                                                   |
-|-------------:|:-----------------:|:--------------------------------------------------------------|
-| kube.context | *kubectl default* | Name of the kubectl context to use                            |
-|    valueYaml |         -         | Global values to be applied during upgrade, formatted as yaml |
+|      Parameter |          Default          | Description                                                   |
+|---------------:|:-------------------------:|:--------------------------------------------------------------|
+|   kube.context |     *kubectl default*     | Name of the kubectl context to use                            |
+| kube.namespace | *kubectl context default* | Namespace for un-scoped kubernetes resources                  |
+|      valueYaml |             -             | Global values to be applied during upgrade, formatted as yaml |
 
 ### Per-Release Configuration
 
@@ -39,7 +40,6 @@ not specified, the name will be derived from the chart name.
 |----------:|:-------------------------:|:---------------------------------------------------------------------------|
 |     chart |        *required*         | Name of the chart                                                          |
 |      name | *Un-versioned chart name* | Name of the release                                                        |
-| namespace | *kubectl context default* | Namespace for un-scoped kubernetes resources                               |
 |  requires |             -             | Comma separated list of releases that must be deployed before this release |
 | nodePorts |             -             | Set Maven property from specified K8s service/port NodePort                |
 | valueYaml |             -             | Values to be applied to release, formatted as yaml                         |
@@ -65,18 +65,30 @@ values.
 
 ## Uninstall Goal
 
-The [uninstall](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/uninstall.html) goal binds by default to the
+The [uninstall](https://chonton.github.io/helmrepo-maven-plugin/0.0.3/uninstall.html) goal binds by default to the
 **post-integration-test** phase. This goal will execute `helm uninstall` for each release. Configuration is similar to
 the **install** goal; the **valueYaml** and **servicePorts** parameters are ignored.
 
+## Template Goal
+
+The [template](https://chonton.github.io/helmrepo-maven-plugin/0.0.3/template.html) goal binds by default to the
+**verify** phase. This goal will expand the chart source. Content will be
+[filtered](https://maven.apache.org/plugins/maven-resources-plugin/examples/filter.html) using maven properties.
+Resulting *.tgz* artifact is attached as a secondary artifact for the build. The helm package will be installed in the
+local maven repository during the **install** phase and deployed to the remote maven repository during the **deploy**
+phase.
+
 ## Package Goal
 
-The [package](https://chonton.github.io/helmrepo-maven-plugin/0.0.2/package.html) goal binds by default to the
+The [package](https://chonton.github.io/helmrepo-maven-plugin/0.0.3/package.html) goal binds by default to the
 **package** phase. This goal will create a helm package from the chart source. Content will be
 [filtered](https://maven.apache.org/plugins/maven-resources-plugin/examples/filter.html) using maven properties.
 Resulting *.tgz* artifact is attached as a secondary artifact for the build. The helm package will be installed in the
 local maven repository during the **install** phase and deployed to the remote maven repository during the **deploy**
 phase.
+
+### Helm Chart Name Limitations
+The chart within the chartDir must equal ${project.artifactId}.
 
 ### Configuration
 
@@ -104,7 +116,7 @@ the top level **<packaging>** element to **tgz** and
       <plugin>
         <groupId>org.honton.chas</groupId>
         <artifactId>helmrepo-maven-plugin</artifactId>
-        <version>0.0.2</version>
+        <version>0.0.3</version>
       </plugin>
     </plugins>
   </pluginManagement>
@@ -187,8 +199,8 @@ nested:
 
 ## Incorrectly Named Chart
 
-If the **package** goal fails with the following error, your chart directory is probably misnamed.
+If the **package** goal fails with the following error, your chart directory is probably empty.
 
 ```text
-[ERROR] Failed to execute goal org.honton.chas:helmrepo-maven-plugin:0.0.2:package (tutorial) on project tutorial: Execution tutorial of goal org.honton.chas:helmrepo-maven-plugin:0.0.2:package failed: archive cannot be empty -> [Help 1]
+[ERROR] Failed to execute goal org.honton.chas:helmrepo-maven-plugin:0.0.3:package (tutorial) on project tutorial: Execution tutorial of goal org.honton.chas:helmrepo-maven-plugin:0.0.3:package failed: archive cannot be empty -> [Help 1]
 ```

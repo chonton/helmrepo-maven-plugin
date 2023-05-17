@@ -25,17 +25,6 @@ public class CommandLineGenerator {
       command.add(chartName);
     }
 
-    if (release.getNamespace() != null) {
-      command.add("--namespace");
-      command.add(release.getNamespace());
-    }
-
-    command.add("--wait");
-    if (release.getWait() != 0) {
-      command.add("--timeout");
-      command.add(release.getWait() + "s");
-    }
-
     String yamlContent = release.getValueYaml();
     if (yamlContent != null) {
       Path yamlPath = options.releaseValues(release.getName() + ".yaml");
@@ -45,6 +34,7 @@ public class CommandLineGenerator {
       }
     }
 
+    options.releaseOptions(release, command);
     return this;
   }
 
@@ -65,6 +55,11 @@ public class CommandLineGenerator {
       if (context != null) {
         command.add("--kube-context");
         command.add(context);
+      }
+      String namespace = kubernetes.getNamespace();
+      if (context != null) {
+        command.add("--namespace");
+        command.add(namespace);
       }
     }
   }
