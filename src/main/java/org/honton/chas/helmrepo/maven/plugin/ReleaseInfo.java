@@ -1,13 +1,18 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
+import java.util.List;
 import java.util.Map;
-import lombok.Data;
+import lombok.Setter;
 
 /** Information about a helm release */
-@Data
+@Setter
 public class ReleaseInfo {
+
+  /** The namespace for un-scoped kubernetes resources */
+  String namespace;
+
   /** The name of the release. Defaults to the unversioned chart name. */
-  private String name;
+  String name;
 
   /**
    * The chart for this release. This can be one of
@@ -21,24 +26,25 @@ public class ReleaseInfo {
    *   <li>An OCI registries: oci://example.com/charts/nginx
    * </ul>
    */
-  private String chart;
+  String chart;
 
   /** Values to be applied during upgrade. This is formatted as yaml. */
-  private String valueYaml;
+  String valueYaml;
 
   /** A comma separated list of releases that must be deployed before this release. */
-  private String requires;
-
-  /** The namespace for un-scoped kubernetes resources */
-  String namespace;
-
-  /**
-   * Mapping maven property name to the service port. The maven property will be set to the
-   * corresponding kubernetes service nodePort. The service and port are separated by ':'. The port
-   * is optional if the service only has a single port.
-   */
-  private Map<String, String> nodePorts;
+  String requires;
 
   /** Number of seconds to wait for successful deployment. Defaults to 300 secs (5 minutes) */
-  private long wait;
+  long wait;
+
+  /**
+   * Maven property names to receive nodePort assignments. The service namespace and name are
+   * separated by '/'. The namespace is optional, name is required. The service name and port are
+   * separated by ':'. The port is optional if the service only has a single port. The maven
+   * property will be set to the corresponding kubernetes service nodePort.
+   */
+  Map<String, String> nodePorts;
+
+  /** Callect logs from pods. Each pod is specified by optional namespace / name */
+  List<String> logs;
 }

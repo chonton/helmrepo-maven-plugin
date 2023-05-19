@@ -9,7 +9,8 @@
 
   <modules>
     <module>package</module>
-    <module>install</module>
+    <module>extension</module>
+    <module>upgrade</module>
     <module>tutorial</module>
   </modules>
 

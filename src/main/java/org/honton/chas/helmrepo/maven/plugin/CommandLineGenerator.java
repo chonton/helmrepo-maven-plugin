@@ -17,17 +17,17 @@ public class CommandLineGenerator {
     behavior.addSubCommand(command);
   }
 
-  public CommandLineGenerator appendRelease(ReleaseInfo release, CommandOptions options)
+  public CommandLineGenerator releaseOptions(ReleaseInfo release, CommandOptions options)
       throws IOException {
-    command.add(release.getName());
+    command.add(release.name);
     String chartName = options.chartReference(release);
     if (chartName != null) {
       command.add(chartName);
     }
 
-    String yamlContent = release.getValueYaml();
+    String yamlContent = release.valueYaml;
     if (yamlContent != null) {
-      Path yamlPath = options.releaseValues(release.getName() + ".yaml");
+      Path yamlPath = options.releaseValues(release.name + ".yaml");
       if (yamlPath != null) {
         Files.writeString(yamlPath, yamlContent);
         appendValues(yamlPath);
@@ -38,7 +38,7 @@ public class CommandLineGenerator {
     return this;
   }
 
-  public CommandLineGenerator appendGlobalReleaseOptions(CommandOptions options, String namespace) {
+  public CommandLineGenerator globalOptions(CommandOptions options, String namespace) {
     appendKubernetes(options.getKubernetes());
     Path globalValuePath = options.getGlobalValuePath();
     if (globalValuePath != null) {
@@ -49,10 +49,10 @@ public class CommandLineGenerator {
       appendValues(globalValuesFile);
     }
     if (namespace != null) {
-      options.createNamespace(command);
       command.add("--namespace");
       command.add(namespace);
     }
+    options.createNamespace(command);
     return this;
   }
 

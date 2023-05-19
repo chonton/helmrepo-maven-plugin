@@ -1,5 +1,8 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +15,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,13 +33,10 @@ import org.eclipse.aether.resolution.ArtifactResolutionException;
 
 public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptions, CommandOptions {
 
-  private static Pattern WARNING =
+  private static final Pattern WARNING =
       Pattern.compile("\\[?(warning)]?:? ?(.+)", Pattern.CASE_INSENSITIVE);
 
-  /** List of releases to upgrade */
-  @Parameter List<ReleaseInfo> releases;
-
-  /** Values to be applied during upgrade. This is inline values formatted as yaml. */
+  /** Values to be applied during upgrade. These are inline values formatted as yaml. */
   @Parameter @Getter String valueYaml;
 
   /** Value file to be applied during upgrade */
@@ -44,20 +45,8 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   /** Information about the kubernetes cluster */
   @Parameter @Getter KubernetesInfo kubernetes;
 
-  /** The entry point to Maven Artifact Resolver, i.e. the component doing all the work. */
-  @Component RepositorySystem repoSystem;
-
-  /** The current repository/network configuration of Maven. */
-  @Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
-  RepositorySystemSession repoSession;
-
-  /** The project's remote repositories to use for the resolution. */
-  @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
-  List<RemoteRepository> remoteRepos;
-
-  Path pwd; // current working directory
-  @Getter Path globalValuePath; // global values path
-  @Getter Path globalValuesFile;
+  /** List of releases to upgrade or uninstall */
+  @Parameter List<ReleaseInfo> releases;
 
   @Parameter(
       defaultValue = "${project.build.directory}/helm-values",
@@ -65,12 +54,46 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
       required = true)
   File helmValues;
 
+  @Component RepositorySystem repoSystem;
+
+  @Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
+  RepositorySystemSession repoSession;
+
+  @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
+  List<RemoteRepository> remoteRepos;
+
+  // work variables ...
+  Path pwd; // current working directory
   Path templatePath;
+  @Getter Path globalValuePath; // global values path
+  @Getter Path globalValuesFile;
+  AtomicReference<KubernetesClient> cachedClient = new AtomicReference<>();
 
   protected void doExecute() throws MojoExecutionException, IOException {
     if (!validateConfiguration()) {
       throw new MojoExecutionException("Invalid configuration");
     }
+    initializeGlobalValuesFiles();
+
+    String globalNamespace = kubernetes != null ? kubernetes.getNamespace() : null;
+    for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
+      String namespace = release.namespace;
+      if (namespace == null) {
+        namespace = globalNamespace;
+      }
+      preHelmCommand(release, namespace);
+
+      CommandLineGenerator generator =
+          new CommandLineGenerator(this)
+              .globalOptions(this, namespace)
+              .releaseOptions(release, this);
+
+      executeHelmCommand(generator.getCommand());
+      postHelmCommand(release, namespace);
+    }
+  }
+
+  protected void initializeGlobalValuesFiles() throws IOException {
     pwd = Path.of("").toAbsolutePath();
 
     templatePath = pwd.relativize(Files.createDirectories(helmValues.toPath()));
@@ -87,21 +110,6 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
         getLog().info("Ignoring unreadable values file " + valuesFile.getAbsolutePath());
       }
     }
-
-    String globalNamespace = kubernetes != null ? kubernetes.getNamespace() : null;
-    for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
-      String namespace = release.getNamespace();
-      if (namespace == null) {
-        namespace = globalNamespace;
-      }
-      CommandLineGenerator generator =
-          new CommandLineGenerator(this)
-              .appendGlobalReleaseOptions(this, namespace)
-              .appendRelease(release, this);
-
-      executeHelmCommand(generator.getCommand());
-      postRelease(release, namespace);
-    }
   }
 
   protected boolean validateConfiguration() {
@@ -114,12 +122,12 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
 
   /** Each Release must have proper release name and chart */
   protected boolean validateRelease(ReleaseInfo release) {
-    String chart = release.getChart();
+    String chart = release.chart;
     if (chart == null) {
       getLog().error("Missing chart in " + release);
       return true;
     }
-    if (release.getName() == null) {
+    if (release.name == null) {
       release.setName(ReleaseHelper.unversionedName(chart));
     }
     if (ReleaseHelper.isMavenArtifact(chart)) {
@@ -132,8 +140,6 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     }
     return false;
   }
-
-  protected void postRelease(ReleaseInfo release, String namespace) {}
 
   void pumpLog(InputStream is, Consumer<String> lineConsumer) {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
@@ -180,9 +186,9 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     releases.forEach(
         release -> {
           ReleaseState requirements =
-              new ReleaseState(release, ReleaseHelper.asSet(release.getRequires()));
-          if (releaseToRequirements.put(release.getName(), requirements) != null) {
-            throw new IllegalStateException("duplicate definition of " + release.getName());
+              new ReleaseState(release, ReleaseHelper.asSet(release.requires));
+          if (releaseToRequirements.put(release.name, requirements) != null) {
+            throw new IllegalStateException("duplicate definition of " + release.name);
           }
         });
 
@@ -213,7 +219,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
               .filter(
                   requirement -> {
                     releaseOrder.add(requirement.getRelease());
-                    releaseToRequirements.remove(requirement.getRelease().getName());
+                    releaseToRequirements.remove(requirement.getRelease().name);
                     return requirement.removeRequiresFromDependents();
                   })
               .count();
@@ -248,9 +254,35 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
         .getAbsolutePath();
   }
 
+  // override point
+  protected void preHelmCommand(ReleaseInfo release, String namespace) {}
+
+  // override point
+  protected void postHelmCommand(ReleaseInfo release, String namespace) {}
+
+  protected KubernetesClient getKubernetesClient() {
+    KubernetesClient result = cachedClient.get();
+    if (result == null) {
+      KubernetesClientBuilder clientBuilder = new KubernetesClientBuilder();
+      KubernetesInfo kubernetesInfo = getKubernetes();
+      if (kubernetesInfo != null) {
+        String context = kubernetesInfo.getContext();
+        if (context != null) {
+          Config config = Config.autoConfigure(context);
+          clientBuilder.withConfig(config);
+        }
+      }
+      result = clientBuilder.build();
+      if (!cachedClient.compareAndSet(null, result)) {
+        return cachedClient.get();
+      }
+    }
+    return result;
+  }
+
   @Override
   public String chartReference(ReleaseInfo info) {
-    return info.getChart();
+    return info.chart;
   }
 
   @Override

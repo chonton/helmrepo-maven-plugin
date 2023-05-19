@@ -38,6 +38,9 @@
               <nodePorts>
                 <tutorial.port>tutorial</tutorial.port>
               </nodePorts>
+              <logs>
+                <pod>tutorial</pod>
+              </logs>
             </release>
           </releases>
         </configuration>

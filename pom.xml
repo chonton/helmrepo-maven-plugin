@@ -73,17 +73,49 @@
     <!-- use com.github.github:site-maven-plugin instead of org.apache.maven.plugins:maven-site-plugin -->
     <maven.site.deploy.skip>true</maven.site.deploy.skip>
 
-    <maven.version>3.2.5</maven.version>
-    <plugin-plugin.version>3.8.2</plugin-plugin.version>
+    <maven.version>3.3.9</maven.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+
+      <!-- convergence between org.codehaus.plexus:plexus-archiver:4.7.1 and org.codehaus.plexus:plexus-io:3.4.1 -->
+      <dependency>
+        <groupId>org.codehaus.plexus</groupId>
+        <artifactId>plexus-utils</artifactId>
+        <version>3.5.1</version>
+      </dependency>
+
+      <!-- convergence between io.fabric8:zjsonpatch:0.3.0 and io.fabric8:kubernetes-client:6.6.2 -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>2.14.2</version>
+      </dependency>
+
+      <!-- convergence between io.fabric8:zjsonpatch:0.3.0 and io.fabric8:kubernetes-client:6.6.2 -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>2.14.2</version>
+      </dependency>
+
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
 
     <dependency>
       <groupId>io.fabric8</groupId>
+      <artifactId>kubernetes-client-api</artifactId>
+      <version>6.6.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.fabric8</groupId>
       <artifactId>kubernetes-client</artifactId>
-      <version>6.6.1</version>
+      <version>6.6.2</version>
+      <scope>runtime</scope>
     </dependency>
 
     <dependency>
@@ -103,8 +135,7 @@
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>
       <artifactId>maven-plugin-annotations</artifactId>
-      <version>3.8.2</version>
-      <scope>provided</scope>
+      <version>3.9.0</version>
     </dependency>
 
     <dependency>
@@ -129,13 +160,6 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>5.9.3</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>5.3.1</version>
       <scope>test</scope>
     </dependency>
 
@@ -177,7 +201,7 @@
 
         <plugin>
           <artifactId>maven-dependency-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.5.0</version>
         </plugin>
 
         <plugin>
@@ -192,7 +216,7 @@
 
         <plugin>
           <artifactId>maven-gpg-plugin</artifactId>
-          <version>3.0.1</version>
+          <version>3.1.0</version>
         </plugin>
 
         <plugin>
@@ -207,22 +231,22 @@
 
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.3.0</version>
         </plugin>
 
         <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.4.0</version>
+          <version>3.5.0</version>
         </plugin>
 
         <plugin>
           <artifactId>maven-plugin-plugin</artifactId>
-          <version>3.8.2</version>
+          <version>3.9.0</version>
         </plugin>
 
         <plugin>
           <artifactId>maven-project-info-reports-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.4.3</version>
         </plugin>
 
         <plugin>
@@ -232,7 +256,7 @@
 
         <plugin>
           <artifactId>maven-scm-publish-plugin</artifactId>
-          <version>3.1.0</version>
+          <version>3.2.1</version>
         </plugin>
 
         <plugin>
@@ -322,6 +346,7 @@
                 <requireMavenVersion>
                   <version>[${maven.version},)</version>
                 </requireMavenVersion>
+                <dependencyConvergence></dependencyConvergence>
               </rules>
             </configuration>
           </execution>
@@ -369,11 +394,21 @@
               <goal>verify</goal>
             </goals>
             <configuration>
-              <invokerTest>install</invokerTest>
+              <invokerTest>extension</invokerTest>
             </configuration>
           </execution>
           <execution>
             <id>20-integration-tests</id>
+            <goals>
+              <goal>run</goal>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <invokerTest>install</invokerTest>
+            </configuration>
+          </execution>
+          <execution>
+            <id>30-integration-tests</id>
             <goals>
               <goal>run</goal>
               <goal>verify</goal>
@@ -432,7 +467,7 @@
       <plugin>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok-maven-plugin</artifactId>
-        <version>1.18.18.0</version>
+        <version>1.18.20.0</version>
         <configuration>
           <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           <outputDirectory>${delombok.output}</outputDirectory>
@@ -464,7 +499,7 @@
 
       <plugin>
         <artifactId>maven-plugin-report-plugin</artifactId>
-        <version>${plugin-plugin.version}</version>
+        <version>3.9.0</version>
         <configuration>
           <disableInternalJavadocLinkValidation>true</disableInternalJavadocLinkValidation>
         </configuration>

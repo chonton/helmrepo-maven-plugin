@@ -13,8 +13,8 @@ Deploy your containers using helm charts to [docker desktop](https://docs.docker
 [docker-maven-plugin](https://dmp.fabric8.io/), [jib](https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin),
 or [buildpacks](https://github.com/paketo-buildpacks/maven). Start k8s pods/deployments/services
 during **pre-integration-test** phase. Use [failsafe](https://maven.apache.org/surefire/maven-failsafe-plugin/) to run
-integration tests during **integration-test** phase. Stop k8s pods/deployments/services during **post-integration-test**
-phase.
+integration tests during **integration-test** phase. Capture logs and uninstall k8s pods/deployments/services during the
+**post-integration-test** phase.
 
 # Plugin
 
@@ -33,19 +33,22 @@ not specified, the name will be derived from the chart name.
 |         kubernetes.context |     *kubectl default*     | Name of the kubectl context to use                            |
 | kubernetes.createNamespace |           true            | Create namespaces if not present                              |
 |       kubernetes.namespace | *kubectl context default* | Namespace for un-scoped kubernetes resources                  |
+|                  valueFile |             -             | Yaml values file to be applied during upgrade                 |
 |                  valueYaml |             -             | Global values to be applied during upgrade, formatted as yaml |
 
 ### Per-Release Configuration
 
-| Parameter |          Default          | Description                                                                |
-|----------:|:-------------------------:|:---------------------------------------------------------------------------|
-|     chart |        *required*         | Name of the chart                                                          |
-|      name | *Un-versioned chart name* | Name of the release                                                        |
-|  requires |             -             | Comma separated list of releases that must be deployed before this release |
-| namespace |    *global namespace*     | Namespace for un-scoped kubernetes resources                               |
-| nodePorts |             -             | Set Maven property from specified K8s service/port NodePort                |
-| valueYaml |             -             | Values to be applied to release, formatted as yaml                         |
-|      wait |            300            | Number of seconds to wait for successful deployment                        |
+| Parameter |              Default              | Description                                                                |
+|----------:|:---------------------------------:|:---------------------------------------------------------------------------|
+|     chart |            *required*             | Name of the chart                                                          |
+|      logs |                 -                 | (uninstall only) Capture logs from specified K8s pods                      |
+|      name |     *Un-versioned chart name*     | Name of the release                                                        |
+| namespace |        *global namespace*         | Namespace for un-scoped kubernetes resources                               |
+| nodePorts |                 -                 | (upgrade only) Set Maven property from specified K8s service/port NodePort |
+|   podLogs | *${project.build.directory}/pods* | (uninstall only) Directory to receive pod logs                             |
+|  requires |                 -                 | Comma separated list of releases that must be deployed before this release |
+| valueYaml |                 -                 | Values to be applied to release, formatted as yaml                         |
+|      wait |                300                | Number of seconds to wait for successful deployment                        |
 
 #### Chart Name
 
@@ -65,11 +68,25 @@ instead of the target port. With NodePort and LoadBalancer service types, the no
 value. After each release is upgraded, the **upgrade** goal will set specified maven properties to the assigned nodePort
 values.
 
+Each element of *nodeports* is of form \[*namespace*/]*name*\[:*port*]. The name is required. The namespace and port are
+optional. The name will match the 
+[Service](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#service-v1-core)'s metadata. The port
+will match either the 
+[ServicePort](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#serviceport-v1-core)name or port.
+
 ## Uninstall Goal
 
 The [uninstall](https://chonton.github.io/helmrepo-maven-plugin/0.0.3/uninstall.html) goal binds by default to the
-**post-integration-test** phase. This goal will execute `helm uninstall` for each release. Configuration is similar to
-the **install** goal; the **valueYaml** and **servicePorts** parameters are ignored.
+**post-integration-test** phase. This goal will capture the logs from specified pods and execute `helm uninstall`
+for each release. Configuration is similar to the **install** goal; except the **valueYaml**, **valueFile**, and
+**nodePorts** parameters are ignored.
+
+### Pod logs
+
+Before uninstalling a release, this goal captures the logs of any specified pods to the *podLogs* directory.
+Each element of *logs* is of form \[*namespace*/]*name*. The name is required. The namespace is optional. These are used
+to match the
+[Pod](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#pod-v1-core)'s metadata.
 
 ## Template Goal
 
@@ -100,6 +117,7 @@ phase.
 |   helmDir | src/helm | Directory holding an unpacked chart named ${project.artifactId} |
 
 ### Helm Chart Name Limitations
+
 The chart within helmDir must equal ${project.artifactId}.
 
 ## tgz Packaging Extension
@@ -161,6 +179,10 @@ nested:
                 <serviceName>test-reports</serviceName>
               </nodePort>
             </nodePorts>
+            <logs>
+              <pod>test</pod>
+              <pod>report</pod>
+            </logs>
           </release>
           <release>
             <name>report-job</name>

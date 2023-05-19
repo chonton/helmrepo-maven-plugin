@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${project.artifactId}
+data:
+  application.yaml: |
+    quarkus:
+      oidc:
+        enabled: true
+        auth-server-url: http://localhost:8180/auth/realms/quarkus
+        client-id: app
+    app:
+      frontend:
+        oidc-realm: quarkus
+        oidc-app: app
+        oidc-server: http://localhost:8180/auth

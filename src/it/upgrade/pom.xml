@@ -10,7 +10,7 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>install</artifactId>
+  <artifactId>upgrade</artifactId>
 
   <build>
     <plugins>
@@ -20,7 +20,7 @@
         <artifactId>helmrepo-maven-plugin</artifactId>
         <executions>
           <execution>
-            <id>install</id>
+            <id>upgrade</id>
             <goals>
               <goal>package</goal>
               <goal>template</goal>

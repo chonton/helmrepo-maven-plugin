@@ -1,8 +1,8 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -28,9 +28,11 @@ class ReleaseHelper {
     return chart.substring(firstIdx);
   }
 
-  Set<String> asSet(String commaSeparated) {
+  static Set<String> asSet(String commaSeparated) {
     return commaSeparated != null
-        ? new HashSet<>(Arrays.asList(commaSeparated.split("\\w*,\\w*")))
+        ? Arrays.stream(commaSeparated.split(",\\s*"))
+            .map(String::strip)
+            .collect(Collectors.toSet())
         : Set.of();
   }
 

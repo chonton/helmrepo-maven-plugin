@@ -23,7 +23,7 @@ public class ReleaseState {
   boolean removeRequiresFromDependents() {
     long count =
         depends.values().stream()
-            .filter(dependent -> dependent.removeRequirement(release.getName()))
+            .filter(dependent -> dependent.removeRequirement(release.name))
             .count();
     return count > 0;
   }
