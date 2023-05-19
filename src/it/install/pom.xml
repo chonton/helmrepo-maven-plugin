@@ -28,6 +28,9 @@
               <goal>uninstall</goal>
             </goals>
             <configuration>
+              <kubernetes>
+                <context>docker-desktop</context>
+              </kubernetes>
               <valueYaml><![CDATA[
 pipeline:
   region: us-east-2

@@ -38,13 +38,20 @@ public class CommandLineGenerator {
     return this;
   }
 
-  public CommandLineGenerator appendGlobalReleaseOptions(CommandOptions options) {
-    if (options != null) {
-      appendKubernetes(options.getKubernetes());
-      Path globalValuePath = options.getGlobalValuePath();
-      if (globalValuePath != null) {
-        appendValues(globalValuePath);
-      }
+  public CommandLineGenerator appendGlobalReleaseOptions(CommandOptions options, String namespace) {
+    appendKubernetes(options.getKubernetes());
+    Path globalValuePath = options.getGlobalValuePath();
+    if (globalValuePath != null) {
+      appendValues(globalValuePath);
+    }
+    Path globalValuesFile = options.getGlobalValuesFile();
+    if (globalValuesFile != null) {
+      appendValues(globalValuesFile);
+    }
+    if (namespace != null) {
+      options.createNamespace(command);
+      command.add("--namespace");
+      command.add(namespace);
     }
     return this;
   }
@@ -55,11 +62,6 @@ public class CommandLineGenerator {
       if (context != null) {
         command.add("--kube-context");
         command.add(context);
-      }
-      String namespace = kubernetes.getNamespace();
-      if (context != null) {
-        command.add("--namespace");
-        command.add(namespace);
       }
     }
   }

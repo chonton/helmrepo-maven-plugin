@@ -1,6 +1,6 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import java.util.List;
+import java.util.Map;
 import lombok.Data;
 
 /** Information about a helm release */
@@ -29,11 +29,15 @@ public class ReleaseInfo {
   /** A comma separated list of releases that must be deployed before this release. */
   private String requires;
 
+  /** The namespace for un-scoped kubernetes resources */
+  String namespace;
+
   /**
-   * Mapping service and port name to maven property name. The maven property will be set to the
-   * corresponding kubernetes service exposed port.
+   * Mapping maven property name to the service port. The maven property will be set to the
+   * corresponding kubernetes service nodePort. The service and port are separated by ':'. The port
+   * is optional if the service only has a single port.
    */
-  private List<PortSelector> nodePorts;
+  private Map<String, String> nodePorts;
 
   /** Number of seconds to wait for successful deployment. Defaults to 300 secs (5 minutes) */
   private long wait;

@@ -25,4 +25,7 @@ public interface CommandOptions extends GlobalReleaseOptions {
 
   /** Add any additional options per release */
   void releaseOptions(ReleaseInfo release, List<String> commands) throws IOException;
+
+  /** create namespace for the release */
+  void createNamespace(List<String> command);
 }

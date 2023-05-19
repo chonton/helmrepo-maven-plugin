@@ -29,14 +29,14 @@
           </execution>
         </executions>
         <configuration>
+          <kubernetes>
+            <context>docker-desktop</context>
+          </kubernetes>
           <releases>
             <release>
               <chart>${project.build.directory}/${project.build.finalName}.tgz</chart>
               <nodePorts>
-                <nodePort>
-                  <propertyName>tutorial.port</propertyName>
-                  <serviceName>tutorial</serviceName>
-                </nodePort>
+                <tutorial.port>tutorial</tutorial.port>
               </nodePorts>
             </release>
           </releases>

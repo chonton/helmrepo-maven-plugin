@@ -1,6 +1,7 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,8 +35,11 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   /** List of releases to upgrade */
   @Parameter List<ReleaseInfo> releases;
 
-  /** Values to be applied during upgrade. This is formatted as yaml. */
+  /** Values to be applied during upgrade. This is inline values formatted as yaml. */
   @Parameter @Getter String valueYaml;
+
+  /** Value file to be applied during upgrade */
+  @Parameter File valuesFile;
 
   /** Information about the kubernetes cluster */
   @Parameter @Getter KubernetesInfo kubernetes;
@@ -51,30 +55,52 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
   @Parameter(defaultValue = "${project.remoteProjectRepositories}", readonly = true)
   List<RemoteRepository> remoteRepos;
 
-  // global values path
-  @Getter Path globalValuePath;
-  Path targetValuesPath;
+  Path pwd; // current working directory
+  @Getter Path globalValuePath; // global values path
+  @Getter Path globalValuesFile;
+
+  @Parameter(
+      defaultValue = "${project.build.directory}/helm-values",
+      readonly = true,
+      required = true)
+  File helmValues;
+
+  Path templatePath;
 
   protected void doExecute() throws MojoExecutionException, IOException {
     if (!validateConfiguration()) {
       throw new MojoExecutionException("Invalid configuration");
     }
-    targetValuesPath = Files.createDirectories(Path.of("target", "helm-values"));
+    pwd = Path.of("").toAbsolutePath();
+
+    templatePath = pwd.relativize(Files.createDirectories(helmValues.toPath()));
     if (valueYaml != null) {
       globalValuePath = releaseValues("_.yaml");
       if (globalValuePath != null) {
         Files.writeString(globalValuePath, valueYaml);
       }
     }
+    if (valuesFile != null && releaseValues(valuesFile.getName()) != null) {
+      if (valuesFile.canRead()) {
+        globalValuesFile = pwd.relativize(valuesFile.toPath());
+      } else {
+        getLog().info("Ignoring unreadable values file " + valuesFile.getAbsolutePath());
+      }
+    }
 
+    String globalNamespace = kubernetes != null ? kubernetes.getNamespace() : null;
     for (ReleaseInfo release : getIterable(getReleasesInRequiredOrder())) {
+      String namespace = release.getNamespace();
+      if (namespace == null) {
+        namespace = globalNamespace;
+      }
       CommandLineGenerator generator =
           new CommandLineGenerator(this)
-              .appendGlobalReleaseOptions(this)
+              .appendGlobalReleaseOptions(this, namespace)
               .appendRelease(release, this);
 
       executeHelmCommand(generator.getCommand());
-      postRelease(release);
+      postRelease(release, namespace);
     }
   }
 
@@ -107,7 +133,7 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
     return false;
   }
 
-  protected void postRelease(ReleaseInfo release) {}
+  protected void postRelease(ReleaseInfo release, String namespace) {}
 
   void pumpLog(InputStream is, Consumer<String> lineConsumer) {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
@@ -237,6 +263,9 @@ public abstract class HelmRelease extends HelmGoal implements GlobalReleaseOptio
 
   @Override
   public Path releaseValues(String valuesFileName) {
-    return targetValuesPath.resolve(valuesFileName);
+    return templatePath.resolve(valuesFileName);
   }
+
+  @Override
+  public void createNamespace(List<String> command) {}
 }

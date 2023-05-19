@@ -1,16 +1,18 @@
 package org.honton.chas.helmrepo.maven.plugin;
 
-import lombok.Value;
+import lombok.Data;
+import org.apache.maven.plugins.annotations.Parameter;
 
 /** Information about the kubernetes cluster */
-@Value
+@Data
 public class KubernetesInfo {
   /** The name of the kubectl context to use */
-  String context;
+  @Parameter private String context;
 
-  /** The namespace for un-scoped kubernetes resources */
-  String namespace;
+  /** Namespace to use if no release namespace */
+  @Parameter private String namespace;
 
-  /** Create namespace if not present */
-  Boolean createNamespace;
+  /** Create namespace if namespace not present */
+  @Parameter(defaultValue = "true")
+  private Boolean createNamespace;
 }

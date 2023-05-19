@@ -15,7 +15,7 @@ public class HelmTemplate extends HelmRelease {
 
   /** Location for expanded charts */
   @Parameter(defaultValue = "${project.build.directory}/helm")
-  File templatePath;
+  File templateDir;
 
   @Override
   public void addSubCommand(List<String> commandLine) {
@@ -25,7 +25,7 @@ public class HelmTemplate extends HelmRelease {
   @Override
   public void releaseOptions(ReleaseInfo release, List<String> command) throws IOException {
     command.add("--output-dir");
-    Path templateDir = Files.createDirectories(templatePath.toPath());
-    command.add(Path.of("").toAbsolutePath().relativize(templateDir).toString());
+    Path templatePath = Files.createDirectories(templateDir.toPath());
+    command.add(pwd.relativize(templatePath).toString());
   }
 }

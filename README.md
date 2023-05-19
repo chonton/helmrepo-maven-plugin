@@ -28,11 +28,12 @@ not specified, the name will be derived from the chart name.
 
 ### Global Configuration
 
-|      Parameter |          Default          | Description                                                   |
-|---------------:|:-------------------------:|:--------------------------------------------------------------|
-|   kube.context |     *kubectl default*     | Name of the kubectl context to use                            |
-| kube.namespace | *kubectl context default* | Namespace for un-scoped kubernetes resources                  |
-|      valueYaml |             -             | Global values to be applied during upgrade, formatted as yaml |
+|                  Parameter |          Default          | Description                                                   |
+|---------------------------:|:-------------------------:|:--------------------------------------------------------------|
+|         kubernetes.context |     *kubectl default*     | Name of the kubectl context to use                            |
+| kubernetes.createNamespace |           true            | Create namespaces if not present                              |
+|       kubernetes.namespace | *kubectl context default* | Namespace for un-scoped kubernetes resources                  |
+|                  valueYaml |             -             | Global values to be applied during upgrade, formatted as yaml |
 
 ### Per-Release Configuration
 
@@ -41,6 +42,7 @@ not specified, the name will be derived from the chart name.
 |     chart |        *required*         | Name of the chart                                                          |
 |      name | *Un-versioned chart name* | Name of the release                                                        |
 |  requires |             -             | Comma separated list of releases that must be deployed before this release |
+| namespace |    *global namespace*     | Namespace for un-scoped kubernetes resources                               |
 | nodePorts |             -             | Set Maven property from specified K8s service/port NodePort                |
 | valueYaml |             -             | Values to be applied to release, formatted as yaml                         |
 |      wait |            300            | Number of seconds to wait for successful deployment                        |
@@ -74,9 +76,11 @@ the **install** goal; the **valueYaml** and **servicePorts** parameters are igno
 The [template](https://chonton.github.io/helmrepo-maven-plugin/0.0.3/template.html) goal binds by default to the
 **verify** phase. This goal will expand the chart source. Content will be
 [filtered](https://maven.apache.org/plugins/maven-resources-plugin/examples/filter.html) using maven properties.
-Resulting *.tgz* artifact is attached as a secondary artifact for the build. The helm package will be installed in the
-local maven repository during the **install** phase and deployed to the remote maven repository during the **deploy**
-phase.
+Parameters are same as for the `upgrade` goal with the addition of the following:
+
+|   Parameter |             Default             | Description                   |
+|------------:|:-------------------------------:|:------------------------------|
+| templateDir | ${project.build.directory}/helm | Directory for expanded charts |
 
 ## Package Goal
 
@@ -87,9 +91,6 @@ Resulting *.tgz* artifact is attached as a secondary artifact for the build. The
 local maven repository during the **install** phase and deployed to the remote maven repository during the **deploy**
 phase.
 
-### Helm Chart Name Limitations
-The chart within the chartDir must equal ${project.artifactId}.
-
 ### Configuration
 
 | Parameter | Default  | Description                                                     |
@@ -97,6 +98,9 @@ The chart within the chartDir must equal ${project.artifactId}.
 |    attach |   true   | Attach helm package as a secondary artifact of the build        |
 |    filter |   true   | Interpolate chart contents, expanding *${variable}* expressions |
 |   helmDir | src/helm | Directory holding an unpacked chart named ${project.artifactId} |
+
+### Helm Chart Name Limitations
+The chart within helmDir must equal ${project.artifactId}.
 
 ## tgz Packaging Extension
 
