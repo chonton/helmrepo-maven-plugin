@@ -73,7 +73,7 @@
     <!-- use com.github.github:site-maven-plugin instead of org.apache.maven.plugins:maven-site-plugin -->
     <maven.site.deploy.skip>true</maven.site.deploy.skip>
 
-    <maven.version>3.3.9</maven.version>
+    <maven.version>3.9.5</maven.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -346,7 +346,7 @@
                 <requireMavenVersion>
                   <version>[${maven.version},)</version>
                 </requireMavenVersion>
-                <dependencyConvergence></dependencyConvergence>
+                <dependencyConvergence/>
               </rules>
             </configuration>
           </execution>
